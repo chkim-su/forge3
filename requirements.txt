@@ -1,0 +1,8 @@
+# Forge3 Plugin Dependencies
+
+# Workflow MCP (local package)
+# Install with: pip install -e ../mcp
+-e ../mcp
+
+# HTTP client for hooks
+httpx>=0.26.0

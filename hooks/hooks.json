@@ -1,0 +1,41 @@
+{
+  "$schema": "https://claude.ai/schemas/hooks.json",
+  "hooks": [
+    {
+      "event": "UserPromptSubmit",
+      "description": "Initialize workflow on /assist command",
+      "matcher": {
+        "prompt": "^/assist\\b"
+      },
+      "hooks": [
+        {
+          "type": "command",
+          "command": "python3 ${CLAUDE_PLUGIN_ROOT}/hooks/router_hook.py"
+        }
+      ]
+    },
+    {
+      "event": "PreToolUse",
+      "description": "Enforce phase agent invocation and validate transitions",
+      "matcher": {
+        "toolName": "^(Task|workflow_transition)$"
+      },
+      "hooks": [
+        {
+          "type": "command",
+          "command": "python3 ${CLAUDE_PLUGIN_ROOT}/hooks/phase_hook.py"
+        }
+      ]
+    },
+    {
+      "event": "Stop",
+      "description": "Prevent stopping with incomplete workflow",
+      "hooks": [
+        {
+          "type": "command",
+          "command": "python3 ${CLAUDE_PLUGIN_ROOT}/hooks/stop_hook.py"
+        }
+      ]
+    }
+  ]
+}
