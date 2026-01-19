@@ -29,7 +29,8 @@ For plugins distributed via `/plugin add github:owner/repo`.
 
 ```
 my-marketplace/
-├── marketplace.json      # At ROOT of repo
+├── .claude-plugin/
+│   └── marketplace.json  # In .claude-plugin/ directory
 ├── README.md
 ├── LICENSE
 └── plugins/
@@ -42,7 +43,10 @@ my-marketplace/
             └── hooks/
 ```
 
-**CRITICAL:** In a marketplace, all plugin content goes inside `plugins/<name>/.claude-plugin/`, NOT at repo root!
+**CRITICAL:**
+- `marketplace.json` goes in `.claude-plugin/` directory
+- Plugin content goes inside `plugins/<name>/.claude-plugin/`
+- `source` in marketplace.json points to `./plugins/<name>` (NOT including .claude-plugin)
 
 ---
 
@@ -63,7 +67,7 @@ my-marketplace/
 
 | Component | Location | Example |
 |-----------|----------|---------|
-| marketplace.json | `<repo-root>/marketplace.json` | `my-marketplace/marketplace.json` |
+| marketplace.json | `<repo>/.claude-plugin/marketplace.json` | `my-marketplace/.claude-plugin/marketplace.json` |
 | plugin.json | `<repo>/plugins/<name>/.claude-plugin/plugin.json` | `my-marketplace/plugins/my-plugin/.claude-plugin/plugin.json` |
 | Agent | `<repo>/plugins/<name>/.claude-plugin/agents/<agent>.md` | `.../agents/my-agent.md` |
 | Command | `<repo>/plugins/<name>/.claude-plugin/commands/<cmd>.md` | `.../commands/my-cmd.md` |
@@ -104,7 +108,7 @@ my-marketplace/
 
 ### marketplace.json
 
-**Location:** `<repo-root>/marketplace.json` (at repository ROOT, NOT inside .claude-plugin!)
+**Location:** `<repo>/.claude-plugin/marketplace.json` (in .claude-plugin/ directory)
 
 **IMPORTANT:** Use this ONLY for Model B (Marketplace distribution).
 
@@ -122,7 +126,7 @@ my-marketplace/
   "plugins": [
     {
       "name": "my-plugin",
-      "source": "plugins/my-plugin/.claude-plugin",
+      "source": "./plugins/my-plugin",
       "description": "Plugin description",
       "version": "1.0.0"
     }
@@ -132,15 +136,23 @@ my-marketplace/
 
 **❌ WRONG - Do NOT create like this:**
 ```json
-// WRONG #1: marketplace.json in wrong location
-// ❌ my-plugin/.claude-plugin/marketplace.json  (WRONG!)
-// ✅ my-marketplace/marketplace.json            (CORRECT - at repo root)
+// WRONG #1: marketplace.json at repo root (wrong location)
+// ❌ my-marketplace/marketplace.json              (WRONG - at root)
+// ✅ my-marketplace/.claude-plugin/marketplace.json  (CORRECT)
 
 // WRONG #2: source pointing to root instead of plugin directory
 {
   "plugins": [{
     "name": "my-plugin",
-    "source": "./"  // ❌ WRONG for marketplace - use "plugins/my-plugin/.claude-plugin"
+    "source": "./"  // ❌ WRONG - use "./plugins/my-plugin"
+  }]
+}
+
+// WRONG #3: source including .claude-plugin path
+{
+  "plugins": [{
+    "name": "my-plugin",
+    "source": "./plugins/my-plugin/.claude-plugin"  // ❌ WRONG - don't include .claude-plugin
   }]
 }
 
@@ -461,7 +473,8 @@ my-plugin/
 **✅ CORRECT structure:**
 ```
 my-marketplace/                      # Repository root
-├── marketplace.json                 # At ROOT (defines plugins)
+├── .claude-plugin/
+│   └── marketplace.json             # In .claude-plugin/ directory
 ├── README.md
 ├── LICENSE
 └── plugins/
@@ -482,22 +495,23 @@ my-marketplace/                      # Repository root
 
 **❌ WRONG marketplace structures:**
 ```
+# WRONG: marketplace.json at repo root (should be in .claude-plugin/)
+my-marketplace/
+├── marketplace.json                 # ❌ Should be in .claude-plugin/
+└── plugins/
+
 # WRONG: Plugin content at repo root (not in plugins/ directory)
 my-marketplace/
-├── marketplace.json
+├── .claude-plugin/
+│   └── marketplace.json
 ├── plugin.json                      # ❌ Should be in plugins/<name>/.claude-plugin/
 ├── agents/                          # ❌ Should be in plugins/<name>/.claude-plugin/
 └── skills/                          # ❌ Should be in plugins/<name>/.claude-plugin/
 
-# WRONG: marketplace.json inside .claude-plugin
+# WRONG: Missing .claude-plugin directory for plugin
 my-marketplace/
 ├── .claude-plugin/
-│   └── marketplace.json             # ❌ Should be at repo root
-└── plugins/
-
-# WRONG: Missing .claude-plugin directory
-my-marketplace/
-├── marketplace.json
+│   └── marketplace.json
 └── plugins/
     └── my-plugin/
         ├── plugin.json              # ❌ Missing .claude-plugin/ wrapper
@@ -530,11 +544,12 @@ skills/my-skill/SKILL.md             # ✅ Correct
 
 | Wrong | Correct | Component |
 |-------|---------|-----------|
-| `.claude-plugin/marketplace.json` | `marketplace.json` at repo root | marketplace location |
-| `"source": "./"` (for marketplace) | `"source": "plugins/name/.claude-plugin"` | marketplace.json |
+| `marketplace.json` at repo root | `.claude-plugin/marketplace.json` | marketplace location |
+| `"source": "./"` (for marketplace) | `"source": "./plugins/name"` | marketplace.json |
+| `"source": "plugins/name/.claude-plugin"` | `"source": "./plugins/name"` | marketplace.json |
 | Plugin content at repo root | Inside `plugins/<name>/.claude-plugin/` | marketplace structure |
 | `"author": "Name"` | `"owner": { "name": "Name" }` | marketplace.json |
-| `"path": "."` | `"source": "plugins/name/.claude-plugin"` | marketplace.json |
+| `"path": "."` | `"source": "./plugins/name"` | marketplace.json |
 | `"config": { ... }` | Not allowed | marketplace.json |
 | `displayName`, `license`, `repository` in marketplace | Remove them | marketplace.json |
 | `allowed_tools:` | `allowed-tools:` | commands |

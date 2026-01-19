@@ -69,7 +69,7 @@ This skill provides exact schemas and validation rules for Claude Code plugin co
 
 ### marketplace.json Schema
 
-**Location:** `<repo-root>/marketplace.json` (at repository ROOT, NOT inside .claude-plugin!)
+**Location:** `<repo>/.claude-plugin/marketplace.json` (in .claude-plugin/ directory)
 
 **IMPORTANT:** This is for Model B (Marketplace distribution) only. See Directory Structure section.
 
@@ -87,7 +87,7 @@ This skill provides exact schemas and validation rules for Claude Code plugin co
   "plugins": [
     {
       "name": "string (required)",
-      "source": "string (required, path to plugin directory)",
+      "source": "string (required, path to plugin directory, e.g. ./plugins/name)",
       "description": "string (optional)",
       "version": "string (optional)"
     }
@@ -110,7 +110,7 @@ This skill provides exact schemas and validation rules for Claude Code plugin co
   "plugins": [
     {
       "name": "my-plugin",
-      "source": "plugins/my-plugin/.claude-plugin",
+      "source": "./plugins/my-plugin",
       "description": "Plugin description",
       "version": "1.0.0"
     }
@@ -120,45 +120,53 @@ This skill provides exact schemas and validation rules for Claude Code plugin co
 
 **❌ WRONG marketplace.json examples:**
 ```json
-// WRONG #1: marketplace.json in WRONG location
-// ❌ my-plugin/.claude-plugin/marketplace.json  (WRONG!)
-// ✅ my-marketplace/marketplace.json            (CORRECT - at repo root)
+// WRONG #1: marketplace.json at repo root (wrong location)
+// ❌ my-marketplace/marketplace.json               (WRONG - at root)
+// ✅ my-marketplace/.claude-plugin/marketplace.json  (CORRECT)
 
 // WRONG #2: source pointing to "./" instead of plugin directory
 {
   "plugins": [{
     "name": "my-plugin",
-    "source": "./"  // ❌ WRONG: Use "plugins/my-plugin/.claude-plugin"
+    "source": "./"  // ❌ WRONG: Use "./plugins/my-plugin"
   }]
 }
 
-// WRONG #3: "author" instead of "owner"
+// WRONG #3: source including .claude-plugin path
+{
+  "plugins": [{
+    "name": "my-plugin",
+    "source": "./plugins/my-plugin/.claude-plugin"  // ❌ WRONG - don't include .claude-plugin
+  }]
+}
+
+// WRONG #4: "author" instead of "owner"
 {
   "name": "my-marketplace",
   "author": "Team Name",  // ❌ WRONG: Use "owner": { "name": "..." }
   "plugins": []
 }
 
-// WRONG #4: "owner" as string instead of object
+// WRONG #5: "owner" as string instead of object
 {
   "name": "my-marketplace",
   "owner": "Team Name",  // ❌ WRONG: Must be object with "name" field
   "plugins": []
 }
 
-// WRONG #5: "path" instead of "source" in plugins
+// WRONG #6: "path" instead of "source" in plugins
 {
   "name": "my-marketplace",
   "owner": { "name": "Team" },
   "plugins": [
     {
       "name": "plugin",
-      "path": "."  // ❌ WRONG: Use "source": "plugins/name/.claude-plugin"
+      "path": "."  // ❌ WRONG: Use "source": "./plugins/name"
     }
   ]
 }
 
-// WRONG #6: "config" object in plugins (not allowed)
+// WRONG #7: "config" object in plugins (not allowed)
 {
   "name": "my-marketplace",
   "owner": { "name": "Team" },
@@ -173,7 +181,7 @@ This skill provides exact schemas and validation rules for Claude Code plugin co
   ]
 }
 
-// WRONG #7: Extra fields not in schema
+// WRONG #8: Extra fields not in schema
 {
   "name": "my-marketplace",
   "owner": { "name": "Team" },
@@ -506,7 +514,8 @@ my-plugin/
 **✅ CORRECT structure:**
 ```
 my-marketplace/                      # Repository root
-├── marketplace.json                 # At ROOT (defines plugins)
+├── .claude-plugin/
+│   └── marketplace.json             # In .claude-plugin/ directory
 ├── README.md
 ├── LICENSE
 └── plugins/
@@ -527,22 +536,23 @@ my-marketplace/                      # Repository root
 
 **❌ WRONG marketplace structures:**
 ```
+# WRONG: marketplace.json at repo root (should be in .claude-plugin/)
+my-marketplace/
+├── marketplace.json                 # ❌ Should be in .claude-plugin/
+└── plugins/
+
 # WRONG: Plugin content at repo root (not in plugins/ directory)
 my-marketplace/
-├── marketplace.json
+├── .claude-plugin/
+│   └── marketplace.json
 ├── plugin.json                      # ❌ Should be in plugins/<name>/.claude-plugin/
 ├── agents/                          # ❌ Should be in plugins/<name>/.claude-plugin/
 └── skills/                          # ❌ Should be in plugins/<name>/.claude-plugin/
 
-# WRONG: marketplace.json inside .claude-plugin
+# WRONG: Missing .claude-plugin directory for plugin
 my-marketplace/
 ├── .claude-plugin/
-│   └── marketplace.json             # ❌ Should be at repo root
-└── plugins/
-
-# WRONG: Missing .claude-plugin directory
-my-marketplace/
-├── marketplace.json
+│   └── marketplace.json
 └── plugins/
     └── my-plugin/
         ├── plugin.json              # ❌ Missing .claude-plugin/ wrapper
@@ -593,11 +603,12 @@ test -f path/to/file && echo "EXISTS" || echo "MISSING"
 
 | Wrong | Correct |
 |-------|---------|
-| `.claude-plugin/marketplace.json` | `marketplace.json` at repo root |
-| `"source": "./"` (for marketplace) | `"source": "plugins/name/.claude-plugin"` |
+| `marketplace.json` at repo root | `.claude-plugin/marketplace.json` |
+| `"source": "./"` (for marketplace) | `"source": "./plugins/name"` |
+| `"source": "plugins/name/.claude-plugin"` | `"source": "./plugins/name"` |
 | Plugin content at repo root | Inside `plugins/<name>/.claude-plugin/` |
 | `"author": "Name"` | `"owner": { "name": "Name" }` |
-| `"path": "."` | `"source": "plugins/name/.claude-plugin"` |
+| `"path": "."` | `"source": "./plugins/name"` |
 | `"config": { ... }` | Not allowed in plugins array |
 | `allowed_tools:` | `allowed-tools:` |
 | `agents/x/agent.md` | `agents/x.md` |
@@ -613,14 +624,14 @@ test -f path/to/file && echo "EXISTS" || echo "MISSING"
 When validating a marketplace.json, perform these additional cross-checks:
 
 ### 1. Marketplace Location Check
-- `marketplace.json` MUST be at repository root
-- NOT in `.claude-plugin/` subdirectory
+- `marketplace.json` MUST be in `.claude-plugin/` directory
+- NOT at repository root
 
 ### 2. Plugin Source Path Validation
 For each plugin in the `plugins` array:
-- The `source` path must follow the pattern: `plugins/<name>/.claude-plugin`
-- The source directory must contain a valid `plugin.json`
-- Resolve paths relative to `marketplace.json` location (repo root)
+- The `source` path must follow the pattern: `./plugins/<name>` (NOT including .claude-plugin)
+- The source directory must contain a `.claude-plugin/plugin.json`
+- Resolve paths relative to `.claude-plugin/marketplace.json` location
 
 ### 3. Name Consistency Check
 - Plugin `name` in marketplace.json must match the `name` field in the corresponding plugin.json
@@ -631,23 +642,24 @@ The following fields are NOT allowed in marketplace.json:
 - `author` at root level (use `owner` instead)
 - `path` in plugins (use `source` instead)
 - `config` object in plugins
-- `source: "./"` pointing to root (should point to `plugins/<name>/.claude-plugin`)
+- `source: "./"` pointing to root (should point to `./plugins/<name>`)
+- `source` including `.claude-plugin` (should be `./plugins/name` not `./plugins/name/.claude-plugin`)
 
 Validation should fail if any of these invalid fields are present.
 
 ### Cross-Validation Commands
 
 ```bash
-# Check marketplace.json is at repo root (not in .claude-plugin)
-test -f "marketplace.json" && echo "CORRECT: At repo root" || echo "WRONG: Not at repo root"
-test -f ".claude-plugin/marketplace.json" && echo "WRONG: In .claude-plugin/" || echo "OK"
+# Check marketplace.json is in .claude-plugin/ (not at repo root)
+test -f ".claude-plugin/marketplace.json" && echo "CORRECT: In .claude-plugin/" || echo "WRONG: Not in .claude-plugin/"
+test -f "marketplace.json" && echo "WRONG: At repo root" || echo "OK"
 
-# Check plugin.json exists at source path
-SOURCE_PATH="plugins/my-plugin/.claude-plugin"
-test -f "${SOURCE_PATH}/plugin.json" && echo "EXISTS" || echo "MISSING"
+# Check plugin.json exists at source path (source points to plugin dir, .claude-plugin/plugin.json inside)
+SOURCE_PATH="./plugins/my-plugin"
+test -f "${SOURCE_PATH}/.claude-plugin/plugin.json" && echo "EXISTS" || echo "MISSING"
 
 # Extract and compare names
-MARKETPLACE_NAME=$(python3 -c "import json; print(json.load(open('marketplace.json'))['plugins'][0]['name'])")
-PLUGIN_NAME=$(python3 -c "import json; print(json.load(open('${SOURCE_PATH}/plugin.json'))['name'])")
+MARKETPLACE_NAME=$(python3 -c "import json; print(json.load(open('.claude-plugin/marketplace.json'))['plugins'][0]['name'])")
+PLUGIN_NAME=$(python3 -c "import json; print(json.load(open('${SOURCE_PATH}/.claude-plugin/plugin.json'))['name'])")
 [ "$MARKETPLACE_NAME" = "$PLUGIN_NAME" ] && echo "MATCH" || echo "MISMATCH: $MARKETPLACE_NAME vs $PLUGIN_NAME"
 ```
