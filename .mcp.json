@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "workflow-mcp": {
+      "type": "stdio",
+      "command": "workflow-mcp",
+      "env": {
+        "WORKFLOW_MCP_HOST": "127.0.0.1",
+        "WORKFLOW_MCP_PORT": "8765",
+        "WORKFLOW_MCP_STATE_FILE": "/tmp/workflow-mcp-state.json"
+      }
+    }
+  }
+}

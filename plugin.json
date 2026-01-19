@@ -1,0 +1,17 @@
+{
+  "name": "forge3",
+  "version": "1.0.0",
+  "description": "MCP-based workflow system for creating Claude Code plugin components with structured phases and state management",
+  "author": {
+    "name": "Claude Code Team"
+  },
+  "license": "MIT",
+  "repository": "https://github.com/chkim-su/forge3",
+  "keywords": [
+    "workflow",
+    "mcp",
+    "plugin-development",
+    "code-generation",
+    "state-machine"
+  ]
+}
