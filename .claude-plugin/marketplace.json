@@ -6,14 +6,14 @@
   },
   "metadata": {
     "description": "MCP-based workflow system for creating Claude Code plugin components with structured phases and state management",
-    "version": "1.0.2"
+    "version": "1.0.3"
   },
   "plugins": [
     {
       "name": "forge3",
       "source": ".",
       "description": "MCP-based workflow system for plugin component creation",
-      "version": "1.0.2"
+      "version": "1.0.3"
     }
   ]
 }

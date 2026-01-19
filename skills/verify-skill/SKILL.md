@@ -8,67 +8,98 @@ triggers:
 
 # Verify Skill
 
-This skill provides guidance for verifying implementations within the Forge3 workflow system.
+This skill provides exact schemas and validation rules for Claude Code plugin components.
 
-## When to Use
+## Exact Schemas
 
-Use this skill when you need to:
-- Validate a created component
-- Check schema compliance
-- Test basic functionality
+### plugin.json Schema
 
-## Validation Checklists
+**Location:** `<plugin-root>/plugin.json`
 
-### Skill Validation
-- [ ] File exists at `skills/<name>/SKILL.md`
-- [ ] YAML frontmatter is valid
-- [ ] `name` field present
-- [ ] `triggers` field has entries
-- [ ] Content sections present
+```json
+{
+  "name": "string (required, kebab-case)",
+  "version": "string (required, semver)",
+  "description": "string (required)",
+  "author": {
+    "name": "string (required if author present)"
+  },
+  "license": "string (optional)",
+  "repository": "string (optional, URL)",
+  "keywords": ["array of strings (optional)"]
+}
+```
 
-### Agent Validation
-- [ ] File exists at `agents/<name>.md`
-- [ ] YAML frontmatter is valid
-- [ ] `name` field present
-- [ ] `description` field present
-- [ ] `tools` field lists tools
-- [ ] System prompt meaningful
+**✅ CORRECT plugin.json:**
+```json
+{
+  "name": "my-plugin",
+  "version": "1.0.0",
+  "description": "A plugin description",
+  "author": {
+    "name": "Developer Name"
+  }
+}
+```
 
-### Command Validation
-- [ ] File exists at `commands/<name>.md`
-- [ ] YAML frontmatter is valid
-- [ ] `name` field present
-- [ ] `description` field present
-- [ ] Implementation present
+**❌ WRONG plugin.json examples:**
+```json
+// WRONG: author as string instead of object
+{
+  "name": "my-plugin",
+  "version": "1.0.0",
+  "description": "A plugin",
+  "author": "Developer Name"  // ❌ Must be object: { "name": "..." }
+}
 
-### Hook Validation
-- [ ] Entry in `hooks/hooks.json`
-- [ ] JSON is valid
-- [ ] Script exists and is valid Python
-- [ ] Exit codes used correctly
+// WRONG: missing required fields
+{
+  "name": "my-plugin"  // ❌ Missing version and description
+}
 
-### plugin.json Validation
-- [ ] File exists at root `plugin.json`
-- [ ] JSON is valid
-- [ ] Required fields: `name`, `version`, `description`
-- [ ] Optional: `author` (object with `name`), `license`, `repository`, `keywords`
+// WRONG: invalid name format
+{
+  "name": "My Plugin",  // ❌ Must be kebab-case: "my-plugin"
+  "version": "1.0.0",
+  "description": "A plugin"
+}
+```
 
-### marketplace.json Validation
-- [ ] File exists at `.claude-plugin/marketplace.json`
-- [ ] JSON is valid
-- [ ] Required fields: `name`, `owner`, `plugins`
-- [ ] `owner` must be object with `name` field
-- [ ] Each plugin entry requires: `name`, `source`
-- [ ] Optional plugin fields: `description`, `version`
-- [ ] Optional: `metadata` object with `description`, `version`
+---
 
-**Correct marketplace.json schema:**
+### marketplace.json Schema
+
+**Location:** `<plugin-root>/.claude-plugin/marketplace.json`
+
+```json
+{
+  "$schema": "string (optional, https://claude.ai/schemas/marketplace.json)",
+  "name": "string (required, kebab-case)",
+  "owner": {
+    "name": "string (required)"
+  },
+  "metadata": {
+    "description": "string (optional)",
+    "version": "string (optional, semver)"
+  },
+  "plugins": [
+    {
+      "name": "string (required)",
+      "source": "string (required, path or URL)",
+      "description": "string (optional)",
+      "version": "string (optional)"
+    }
+  ]
+}
+```
+
+**✅ CORRECT marketplace.json:**
 ```json
 {
   "$schema": "https://claude.ai/schemas/marketplace.json",
-  "name": "marketplace-name",
+  "name": "my-marketplace",
   "owner": {
-    "name": "Owner Name"
+    "name": "Team Name"
   },
   "metadata": {
     "description": "Marketplace description",
@@ -76,7 +107,7 @@ Use this skill when you need to:
   },
   "plugins": [
     {
-      "name": "plugin-name",
+      "name": "my-plugin",
       "source": ".",
       "description": "Plugin description",
       "version": "1.0.0"
@@ -85,47 +116,363 @@ Use this skill when you need to:
 }
 ```
 
-**Invalid patterns to avoid:**
-- `"author": "Name"` - Use `"owner": { "name": "Name" }` instead
-- `"path": "."` - Use `"source": "."` instead
-- `"config": { ... }` - Not allowed in plugin entries
+**❌ WRONG marketplace.json examples:**
+```json
+// WRONG #1: "author" instead of "owner"
+{
+  "name": "my-marketplace",
+  "author": "Team Name",  // ❌ WRONG: Use "owner": { "name": "..." }
+  "plugins": []
+}
+
+// WRONG #2: "owner" as string instead of object
+{
+  "name": "my-marketplace",
+  "owner": "Team Name",  // ❌ WRONG: Must be object with "name" field
+  "plugins": []
+}
+
+// WRONG #3: "path" instead of "source" in plugins
+{
+  "name": "my-marketplace",
+  "owner": { "name": "Team" },
+  "plugins": [
+    {
+      "name": "plugin",
+      "path": "."  // ❌ WRONG: Use "source": "."
+    }
+  ]
+}
+
+// WRONG #4: "config" object in plugins (not allowed)
+{
+  "name": "my-marketplace",
+  "owner": { "name": "Team" },
+  "plugins": [
+    {
+      "path": ".",
+      "config": {  // ❌ WRONG: "config" is not allowed
+        "name": "plugin",
+        "version": "1.0.0"
+      }
+    }
+  ]
+}
+
+// WRONG #5: Extra fields not in schema
+{
+  "name": "my-marketplace",
+  "owner": { "name": "Team" },
+  "displayName": "My Marketplace",  // ❌ WRONG: Not in schema
+  "license": "MIT",                  // ❌ WRONG: Not in schema
+  "repository": "https://...",       // ❌ WRONG: Not in schema
+  "keywords": [],                    // ❌ WRONG: Not in schema
+  "categories": [],                  // ❌ WRONG: Not in schema
+  "requirements": {},                // ❌ WRONG: Not in schema
+  "installation": {},                // ❌ WRONG: Not in schema
+  "plugins": []
+}
+```
+
+---
+
+### Agent Schema
+
+**Location:** `<plugin-root>/agents/<agent-name>.md`
+
+```yaml
+---
+name: string (required, kebab-case)
+description: string (required, when to use this agent)
+tools:
+  - ToolName (required, array)
+model: string (optional: haiku, sonnet, opus)
+color: string (optional: blue, cyan, green, yellow, magenta, red)
+---
+
+# System Prompt Content
+```
+
+**✅ CORRECT agent:**
+```yaml
+---
+name: my-agent
+description: Use this agent when analyzing code quality
+tools:
+  - Read
+  - Grep
+  - Glob
+model: haiku
+color: blue
+---
+
+# My Agent
+
+You are a code analysis agent...
+```
+
+**❌ WRONG agent examples:**
+```yaml
+# WRONG: File at wrong location
+# Location: agents/my-agent/agent.md  ❌
+# Correct:  agents/my-agent.md  ✅
+
+# WRONG: Missing required fields
+---
+name: my-agent
+# ❌ Missing description and tools
+---
+
+# WRONG: tools as string instead of array
+---
+name: my-agent
+description: An agent
+tools: Read, Grep  # ❌ Must be array: ["Read", "Grep"]
+---
+
+# WRONG: allowed_tools instead of tools
+---
+name: my-agent
+description: An agent
+allowed_tools:  # ❌ WRONG: Use "tools" not "allowed_tools"
+  - Read
+---
+```
+
+---
+
+### Command Schema
+
+**Location:** `<plugin-root>/commands/<command-name>.md`
+
+```yaml
+---
+name: string (required, kebab-case)
+description: string (required)
+allowed-tools:
+  - ToolName (optional, array, kebab-case field name!)
+argument-hint: string (optional)
+---
+
+# Command Content
+```
+
+**✅ CORRECT command:**
+```yaml
+---
+name: my-command
+description: Runs my command
+allowed-tools:
+  - Read
+  - Write
+argument-hint: "<file-path>"
+---
+
+# /my-command
+
+Instructions for the command...
+```
+
+**❌ WRONG command examples:**
+```yaml
+# WRONG: allowed_tools (underscore) instead of allowed-tools (hyphen)
+---
+name: my-command
+description: A command
+allowed_tools:  # ❌ WRONG: Use "allowed-tools" (kebab-case)
+  - Read
+---
+
+# WRONG: File at wrong location
+# Location: commands/my-command/command.md  ❌
+# Correct:  commands/my-command.md  ✅
+```
+
+---
+
+### Skill Schema
+
+**Location:** `<plugin-root>/skills/<skill-name>/SKILL.md`
+
+```yaml
+---
+name: string (required, kebab-case)
+triggers:
+  - string (required, array of trigger phrases)
+---
+
+# Skill Content
+```
+
+**✅ CORRECT skill:**
+```yaml
+---
+name: my-skill
+triggers:
+  - "use my skill"
+  - "activate skill"
+---
+
+# My Skill
+
+Skill content...
+```
+
+**❌ WRONG skill examples:**
+```yaml
+# WRONG: File at wrong location
+# Location: skills/my-skill.md  ❌
+# Correct:  skills/my-skill/SKILL.md  ✅
+
+# WRONG: triggers as string
+---
+name: my-skill
+triggers: "use my skill"  # ❌ Must be array
+---
+
+# WRONG: Missing SKILL.md filename
+# Location: skills/my-skill/index.md  ❌
+# Correct:  skills/my-skill/SKILL.md  ✅
+```
+
+---
+
+### hooks.json Schema
+
+**Location:** `<plugin-root>/hooks/hooks.json`
+
+```json
+{
+  "$schema": "string (optional)",
+  "hooks": [
+    {
+      "event": "string (required: PreToolUse, PostToolUse, Stop, etc.)",
+      "matcher": "string (optional, regex pattern)",
+      "command": "string (required, shell command with ${CLAUDE_PLUGIN_ROOT})"
+    }
+  ]
+}
+```
+
+**✅ CORRECT hooks.json:**
+```json
+{
+  "hooks": [
+    {
+      "event": "PreToolUse",
+      "matcher": "^Bash$",
+      "command": "python3 ${CLAUDE_PLUGIN_ROOT}/hooks/validate.py"
+    }
+  ]
+}
+```
+
+**❌ WRONG hooks.json examples:**
+```json
+// WRONG: hooks as object instead of array
+{
+  "hooks": {  // ❌ Must be array
+    "PreToolUse": { ... }
+  }
+}
+
+// WRONG: Missing event field
+{
+  "hooks": [
+    {
+      "matcher": "^Bash$",
+      "command": "python3 script.py"  // ❌ Missing "event"
+    }
+  ]
+}
+
+// WRONG: Hardcoded path instead of ${CLAUDE_PLUGIN_ROOT}
+{
+  "hooks": [
+    {
+      "event": "PreToolUse",
+      "command": "python3 /home/user/plugin/hooks/script.py"  // ❌ Use ${CLAUDE_PLUGIN_ROOT}
+    }
+  ]
+}
+```
+
+---
+
+## Directory Structure
+
+**✅ CORRECT plugin structure:**
+```
+my-plugin/
+├── plugin.json                      # Required at root
+├── .claude-plugin/
+│   └── marketplace.json             # If publishing to marketplace
+├── agents/
+│   └── my-agent.md                  # Direct file, not subdirectory
+├── commands/
+│   └── my-command.md                # Direct file, not subdirectory
+├── skills/
+│   └── my-skill/
+│       └── SKILL.md                 # Must be SKILL.md in subdirectory
+└── hooks/
+    ├── hooks.json                   # Hook configuration
+    └── my-hook.py                   # Hook scripts
+```
+
+**❌ WRONG directory structures:**
+```
+# WRONG: Agent in subdirectory
+agents/my-agent/agent.md  ❌
+agents/my-agent.md        ✅
+
+# WRONG: Command in subdirectory
+commands/my-command/command.md  ❌
+commands/my-command.md          ✅
+
+# WRONG: Skill as direct file
+skills/my-skill.md              ❌
+skills/my-skill/SKILL.md        ✅
+
+# WRONG: Skill with wrong filename
+skills/my-skill/index.md        ❌
+skills/my-skill/skill.md        ❌
+skills/my-skill/SKILL.md        ✅
+
+# WRONG: Missing plugin.json at root
+my-plugin/
+├── .claude-plugin/
+│   └── marketplace.json   # ❌ plugin.json missing at root!
+└── agents/
+```
+
+---
 
 ## Verification Commands
 
 ```bash
-# YAML validation
-python3 -c "import yaml; yaml.safe_load(open('file.md'))"
+# Validate JSON syntax
+python3 -c "import json; json.load(open('file.json'))"
 
-# Python validation
+# Validate YAML frontmatter
+python3 -c "import yaml; yaml.safe_load(open('file.md').read().split('---')[1])"
+
+# Validate Python syntax
 python3 -m py_compile file.py
 
-# JSON validation
-python3 -c "import json; json.load(open('file.json'))"
+# Check file exists
+test -f path/to/file && echo "EXISTS" || echo "MISSING"
 ```
 
-## Verification Process
+---
 
-1. **Check structure** - Files in correct locations
-2. **Validate schema** - Required fields present
-3. **Test syntax** - Valid YAML/Python/JSON
-4. **Report results** - Pass/Fail with details
+## Quick Reference: Common Mistakes
 
-## Output Format
-
-```
-VERIFICATION_RESULTS:
-- component: <name>
-- status: <pass|fail>
-
-CHECKS_PERFORMED:
-- <check>: <pass|fail>
-
-WORKFLOW_STATUS: <complete|needs_fixes>
-```
-
-## Important Notes
-
-- Verify does NOT modify files
-- Verify ONLY reads and validates
-- Report actual issues, not preferences
-- Mark complete only when all checks pass
+| Wrong | Correct |
+|-------|---------|
+| `"author": "Name"` | `"owner": { "name": "Name" }` |
+| `"path": "."` | `"source": "."` |
+| `"config": { ... }` | Not allowed in plugins array |
+| `allowed_tools:` | `allowed-tools:` |
+| `agents/x/agent.md` | `agents/x.md` |
+| `skills/x.md` | `skills/x/SKILL.md` |
+| `tools: Read, Grep` | `tools: [Read, Grep]` |
