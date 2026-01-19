@@ -1,19 +1,19 @@
 # Forge3 Workflow System
 
-MCP-based workflow system for creating Claude Code plugin components with structured phases and state management.
+Workflow engine-based system for creating Claude Code plugin components with structured phases and state management.
 
 ## Overview
 
 Forge3 provides a structured workflow for creating plugin components (skills, agents, commands, hooks) with:
 
-- **MCP Daemon as SSOT** - Single source of truth for workflow state
+- **Workflow daemon as SSOT** - Single source of truth for workflow state
 - **Event-driven architecture** - SSE-based notifications instead of polling
 - **Phase enforcement** - Hooks enforce agent invocation and transition rules
 - **Core invariants** - Strict separation of concerns
 
 ## Core Invariants
 
-1. **LLM never owns state** - MCP daemon is the authority
+1. **LLM never owns state** - workflow daemon is the authority
 2. **Agent never makes final file decisions** - Main LLM does
 3. **Hook never makes semantic judgments** - Only structural enforcement
 4. **Router Agent is always invoked** - Pattern matching is optimization only
@@ -26,8 +26,8 @@ Forge3 provides a structured workflow for creating plugin components (skills, ag
 # Install dependencies
 pip install -r requirements.txt
 
-# Start MCP server
-python -m mcp.workflow_server
+# Start workflow daemon
+workflowd
 ```
 
 ## Usage
@@ -44,7 +44,7 @@ python -m mcp.workflow_server
 
 ```
 forge3/
-├── mcp/                    # MCP daemon (FastAPI server)
+├── mcp/                    # Workflow daemon (FastAPI server)
 │   ├── workflow_schema.py  # Pydantic models
 │   ├── state_store.py      # In-memory + JSON persistence
 │   ├── workflow_engine.py  # State machine logic
@@ -104,18 +104,18 @@ python scripts/workflow_monitor.py --workflow-id <id>
 ```bash
 # Start server in development mode
 cd forge3
-python -m mcp.workflow_server
+workflowd
 
 # Test endpoints
-curl http://127.0.0.1:8765/health
-curl http://127.0.0.1:8765/workflow/status
+curl http://127.0.0.1:8766/health
+curl http://127.0.0.1:8766/workflow/status
 ```
 
 ## Testing
 
-1. **Unit Test** - MCP daemon endpoints
+1. **Unit Test** - workflow daemon endpoints
    ```bash
-   curl http://127.0.0.1:8765/workflow/status
+   curl http://127.0.0.1:8766/workflow/status
    ```
 
 2. **Hook Test** - Hook communication

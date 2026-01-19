@@ -13,6 +13,7 @@ import sys
 import os
 
 from client import DaemonControlClient
+from skill_loader import get_phase_skill_injection
 
 # Phase display names and order
 PHASE_INFO = {
@@ -75,7 +76,9 @@ def main():
 
     if next_phase:
         next_banner = format_phase_banner(next_phase, "Starting...")
-        announcement = f"\n---\n{complete_banner}\n{next_banner}\n---\n"
+        # Get skill content for next phase
+        skill_injection = get_phase_skill_injection(next_phase) or ""
+        announcement = f"\n---\n{complete_banner}\n{next_banner}\n---\n\n{skill_injection}"
     else:
         announcement = f"\n---\n{complete_banner}\nWorkflow finished.\n---\n"
 

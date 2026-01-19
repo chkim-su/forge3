@@ -19,6 +19,7 @@ import subprocess
 from typing import Optional
 
 from client import DaemonControlClient
+from skill_loader import get_phase_skill_injection
 
 
 def block_with_message(message: str):
@@ -97,6 +98,9 @@ def main():
         workflow_id = data.get("workflow_id", "unknown")
         required_agent = data.get("required_agent", "router-agent")
 
+        # Get skill content for router phase
+        skill_injection = get_phase_skill_injection("router") or ""
+
         result = {
             "decision": "modify",
             "modifications": {
@@ -113,7 +117,9 @@ Current phase: router
 Required action: Invoke {required_agent} agent using Task tool.
 
 IMPORTANT: You MUST invoke the {required_agent} agent before any other tools.
-</workflow-context>"""
+</workflow-context>
+
+{skill_injection}"""
             }
         }
         print(json.dumps(result))

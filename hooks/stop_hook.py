@@ -6,7 +6,7 @@ Event: Stop
 Trigger: Always (no matcher)
 
 CRITICAL BEHAVIOR:
-- Check if workflow can be stopped via MCP daemon
+- Check if workflow can be stopped via workflow daemon
 - BLOCK if workflow is incomplete
 - ALLOW if workflow is complete, cancelled, or no active workflow
 
@@ -19,22 +19,10 @@ import json
 import sys
 import os
 
-# MCP server URL
-MCP_URL = os.environ.get("FORGE3_MCP_URL", "http://127.0.0.1:8765")
+from client import DaemonControlClient
 
 
-def check_can_stop():
-    """Check with MCP daemon if workflow can be stopped."""
-    try:
-        import httpx
-        response = httpx.get(f"{MCP_URL}/workflow/can-stop", timeout=3.0)
-        if response.status_code == 200:
-            return response.json()
-    except Exception as e:
-        sys.stderr.write(f"Stop hook: Could not check can-stop: {e}\n")
-        # If MCP is unavailable, allow stop
-        return {"can_stop": True, "reason": "MCP unavailable"}
-    return {"can_stop": True, "reason": "MCP check failed"}
+client = DaemonControlClient()
 
 
 def block_with_message(message: str):
@@ -54,8 +42,8 @@ def allow():
 
 def main():
     """Handle Stop event."""
-    # Check with MCP daemon
-    result = check_can_stop()
+    # Check with workflow daemon
+    result = client.can_stop()
 
     can_stop = result.get("can_stop", True)
     reason = result.get("reason", "Unknown")

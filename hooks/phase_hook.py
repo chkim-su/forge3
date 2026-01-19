@@ -10,7 +10,7 @@ CRITICAL BEHAVIOR:
   - ALLOW Task tool with required agent
   - BLOCK everything else
 - If tool is workflow_transition:
-  - Validate with MCP daemon
+  - Validate with workflow daemon
   - BLOCK invalid transitions
 
 Exit codes:
@@ -22,8 +22,7 @@ import json
 import sys
 import os
 
-# MCP server URL
-MCP_URL = os.environ.get("FORGE3_MCP_URL", "http://127.0.0.1:8765")
+from client import DaemonControlClient
 
 # Agent name to subagent_type mapping
 AGENT_MAPPING = {
@@ -34,57 +33,7 @@ AGENT_MAPPING = {
 }
 
 
-def get_workflow_status():
-    """Get current workflow status from MCP daemon."""
-    try:
-        import httpx
-        response = httpx.get(f"{MCP_URL}/workflow/status", timeout=3.0)
-        if response.status_code == 200:
-            return response.json()
-    except Exception as e:
-        sys.stderr.write(f"Phase hook: Could not get workflow status: {e}\n")
-    return None
-
-
-def record_agent_invoke(workflow_id: str, agent_name: str, phase: str):
-    """Record agent invocation with MCP daemon."""
-    try:
-        import httpx
-        response = httpx.post(
-            f"{MCP_URL}/agent/invoke",
-            json={
-                "workflow_id": workflow_id,
-                "agent_name": agent_name,
-                "phase": phase,
-            },
-            timeout=3.0,
-        )
-        return response.status_code == 200
-    except Exception as e:
-        sys.stderr.write(f"Phase hook: Could not record agent invoke: {e}\n")
-    return False
-
-
-def validate_transition(workflow_id: str, from_phase: str, to_phase: str, evidence: dict, conditions: list):
-    """Validate phase transition with MCP daemon."""
-    try:
-        import httpx
-        response = httpx.post(
-            f"{MCP_URL}/workflow/transition",
-            json={
-                "workflow_id": workflow_id,
-                "from_phase": from_phase,
-                "to_phase": to_phase,
-                "evidence": evidence,
-                "conditions_met": conditions,
-            },
-            timeout=5.0,
-        )
-        return response.json()
-    except Exception as e:
-        sys.stderr.write(f"Phase hook: Could not validate transition: {e}\n")
-    return {"success": False, "message": "MCP daemon unavailable"}
-
+client = DaemonControlClient()
 
 def block_with_message(message: str):
     """Output block response and exit."""
@@ -113,7 +62,7 @@ def main():
     tool_input = input_data.get("tool_input", {})
 
     # Get workflow status
-    status = get_workflow_status()
+    status = client.get_status()
 
     # If no active workflow, allow tool execution
     if status is None or status.get("message") == "No active workflow found":
@@ -135,7 +84,7 @@ def main():
             # Only allow the required agent
             if subagent_type == expected_subagent or subagent_type == required_agent:
                 # Record agent invocation
-                record_agent_invoke(workflow_id, required_agent, current_phase)
+                client.record_agent_invoke(workflow_id, required_agent, current_phase)
                 allow()
             else:
                 block_with_message(
@@ -155,16 +104,19 @@ def main():
     if tool_name == "workflow_transition":
         from_phase = tool_input.get("from_phase", current_phase)
         to_phase = tool_input.get("to_phase")
+        commit_sha = tool_input.get("commit_sha")
         evidence = tool_input.get("evidence", {})
         conditions = tool_input.get("conditions_met", [])
 
-        # Validate with MCP daemon
-        result = validate_transition(
-            workflow_id,
-            from_phase,
-            to_phase,
-            evidence,
-            conditions,
+        # Validate with workflow daemon
+        result = client.validate_transition(
+            workflow_id=workflow_id,
+            session_id=status.get("session_id"),
+            from_phase=from_phase,
+            to_phase=to_phase,
+            evidence=evidence,
+            conditions=conditions,
+            commit_sha=commit_sha,
         )
 
         if result.get("success"):

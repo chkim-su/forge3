@@ -546,3 +546,39 @@ test -f path/to/file && echo "EXISTS" || echo "MISSING"
 | `tools: Read, Grep` | `tools: [Read, Grep]` |
 | `"hooks": [...]` (array) | `"hooks": { "EventName": [...] }` (object) |
 | Missing `"type": "command"` | Always include in hook command |
+
+---
+
+## Marketplace Cross-Validation
+
+When validating a marketplace.json, perform these additional cross-checks:
+
+### 1. Plugin Source Path Validation
+For each plugin in the `plugins` array:
+- The `source` path must point to a directory containing a valid `plugin.json`
+- Resolve relative paths from the marketplace.json location
+
+### 2. Name Consistency Check
+- Plugin `name` in marketplace.json must match the `name` field in the corresponding plugin.json
+- Report mismatches as validation errors
+
+### 3. Invalid Fields Detection
+The following fields are NOT allowed in marketplace.json:
+- `author` at root level (use `owner` instead)
+- `path` in plugins (use `source` instead)
+- `config` object in plugins
+
+Validation should fail if any of these invalid fields are present.
+
+### Cross-Validation Commands
+
+```bash
+# Check plugin.json exists at source path
+SOURCE_PATH="./path/to/plugin"
+test -f "${SOURCE_PATH}/plugin.json" && echo "EXISTS" || echo "MISSING"
+
+# Extract and compare names
+MARKETPLACE_NAME=$(python3 -c "import json; print(json.load(open('marketplace.json'))['plugins'][0]['name'])")
+PLUGIN_NAME=$(python3 -c "import json; print(json.load(open('${SOURCE_PATH}/plugin.json'))['name'])")
+[ "$MARKETPLACE_NAME" = "$PLUGIN_NAME" ] && echo "MATCH" || echo "MISMATCH: $MARKETPLACE_NAME vs $PLUGIN_NAME"
+```

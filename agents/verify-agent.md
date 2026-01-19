@@ -51,6 +51,26 @@ You are the Verify Agent for the Forge3 workflow system. Your job is to verify t
 - Python script exists and is syntactically valid
 - Event type is valid
 
+## Connectivity Checks
+
+### 1. Skill-Agent Pairing
+For each `skills/<name>/SKILL.md`:
+- Check agent exists at `agents/<name>.md` or `agents/<name>-agent.md`
+- Report orphaned skills (skills without matching agents)
+
+### 2. Hook Script Verification
+For each hook in hooks.json:
+- Verify referenced .py file exists
+- Verify Python syntax is valid using `python3 -m py_compile`
+
+### 3. Output Format Addition
+Add to your verification output:
+```
+CONNECTIVITY_ANALYSIS:
+- orphaned_skills: [list or "None"]
+- missing_hook_scripts: [list or "None"]
+```
+
 ## Output Format
 
 Report verification results (keep it brief):

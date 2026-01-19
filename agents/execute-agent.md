@@ -83,7 +83,7 @@ Describe expected output structure.
 ---
 name: command-name
 description: What this command does
-allowed_tools:
+allowed-tools:
   - Tool1
 ---
 
