@@ -47,6 +47,49 @@ Use this skill when you need to:
 - [ ] Script exists and is valid Python
 - [ ] Exit codes used correctly
 
+### plugin.json Validation
+- [ ] File exists at root `plugin.json`
+- [ ] JSON is valid
+- [ ] Required fields: `name`, `version`, `description`
+- [ ] Optional: `author` (object with `name`), `license`, `repository`, `keywords`
+
+### marketplace.json Validation
+- [ ] File exists at `.claude-plugin/marketplace.json`
+- [ ] JSON is valid
+- [ ] Required fields: `name`, `owner`, `plugins`
+- [ ] `owner` must be object with `name` field
+- [ ] Each plugin entry requires: `name`, `source`
+- [ ] Optional plugin fields: `description`, `version`
+- [ ] Optional: `metadata` object with `description`, `version`
+
+**Correct marketplace.json schema:**
+```json
+{
+  "$schema": "https://claude.ai/schemas/marketplace.json",
+  "name": "marketplace-name",
+  "owner": {
+    "name": "Owner Name"
+  },
+  "metadata": {
+    "description": "Marketplace description",
+    "version": "1.0.0"
+  },
+  "plugins": [
+    {
+      "name": "plugin-name",
+      "source": ".",
+      "description": "Plugin description",
+      "version": "1.0.0"
+    }
+  ]
+}
+```
+
+**Invalid patterns to avoid:**
+- `"author": "Name"` - Use `"owner": { "name": "Name" }` instead
+- `"path": "."` - Use `"source": "."` instead
+- `"config": { ... }` - Not allowed in plugin entries
+
 ## Verification Commands
 
 ```bash

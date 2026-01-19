@@ -74,6 +74,49 @@ if __name__ == "__main__":
     main()
 ```
 
+### plugin.json Template
+```json
+{
+  "name": "plugin-name",
+  "version": "1.0.0",
+  "description": "Plugin description",
+  "author": {
+    "name": "Author Name"
+  },
+  "license": "MIT",
+  "repository": "https://github.com/owner/repo",
+  "keywords": ["keyword1", "keyword2"]
+}
+```
+
+### marketplace.json Template
+```json
+{
+  "$schema": "https://claude.ai/schemas/marketplace.json",
+  "name": "marketplace-name",
+  "owner": {
+    "name": "Owner Name"
+  },
+  "metadata": {
+    "description": "Marketplace description",
+    "version": "1.0.0"
+  },
+  "plugins": [
+    {
+      "name": "plugin-name",
+      "source": ".",
+      "description": "Plugin description",
+      "version": "1.0.0"
+    }
+  ]
+}
+```
+
+**Important:** Do NOT use these invalid patterns:
+- `"author": "string"` → Use `"owner": { "name": "string" }`
+- `"path": "."` → Use `"source": "."`
+- `"config": { ... }` → Not allowed in plugin entries
+
 ## Execution Process
 
 1. **Follow the plan** - Implement exactly as designed
