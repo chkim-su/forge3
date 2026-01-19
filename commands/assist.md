@@ -31,12 +31,40 @@ Start a guided workflow to create Claude Code plugin components.
 
 ## Workflow Phases
 
-The assist command guides you through a structured workflow:
+The assist command guides you through a structured workflow with visible phase indicators:
 
-1. **Router Phase** - Classifies your intent
-2. **Semantic Phase** - Plans the implementation structure
-3. **Execute Phase** - Creates the actual files
-4. **Verify Phase** - Validates the implementation
+```
+---
+[Phase 1: Router] Starting...
+---
+```
+
+| Phase | Agent | Purpose |
+|-------|-------|---------|
+| 1. Router | router-agent | Classifies your intent |
+| 2. Semantic | semantic-agent | Plans the implementation structure |
+| 3. Execute | execute-agent | Creates the actual files |
+| 4. Verify | verify-agent | Validates the implementation |
+
+### Phase Transitions
+
+When each phase completes, you'll see:
+
+```
+---
+[Phase N: Name] Complete
+[Phase N+1: Name] Starting...
+---
+```
+
+When the workflow finishes:
+
+```
+---
+[Phase 4: Verify] Complete
+Workflow finished.
+---
+```
 
 ## What Happens
 
@@ -47,9 +75,12 @@ When you run `/assist`:
 3. The execute-agent creates the files
 4. The verify-agent validates the result
 
+Each agent produces concise output - exploration and file reading happens internally.
+
 ## Requirements
 
-- MCP daemon must be running (`python -m mcp.workflow_server`)
+- Workflow daemon must be running (`workflowd`)
+- Serena MCP server must be available (for efficient codebase exploration)
 - Each phase must complete before the next begins
 - You cannot skip phases
 
@@ -65,8 +96,9 @@ When you run `/assist`:
 ## Troubleshooting
 
 If the workflow gets stuck:
-1. Check MCP daemon is running
-2. Verify current phase status
-3. Invoke the required agent manually
+1. Check workflow daemon is running
+2. Check Serena MCP server is available
+3. Verify current phase status
+4. Invoke the required agent manually
 
 Use `/verify` to check component validity after creation.

@@ -6,7 +6,7 @@ Event: UserPromptSubmit
 Trigger: Prompt matches ^/assist\\b
 
 CRITICAL BEHAVIOR:
-- POST to MCP daemon to initialize workflow
+- POST to workflow daemon to initialize workflow
 - Exit 0 immediately (NO waiting!)
 - Returns instruction for Claude to invoke router-agent
 """
@@ -15,9 +15,46 @@ import json
 import sys
 import os
 import re
+import subprocess
+from typing import Optional
 
-# MCP server URL
-MCP_URL = os.environ.get("FORGE3_MCP_URL", "http://127.0.0.1:8765")
+from client import DaemonControlClient
+
+
+def block_with_message(message: str):
+    result = {
+        "decision": "block",
+        "reason": message,
+    }
+    print(json.dumps(result))
+    sys.exit(2)
+
+
+def _git_toplevel(path: str) -> Optional[str]:
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "--show-toplevel"],
+            cwd=path,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+    except Exception:
+        return None
+
+    if result.returncode != 0:
+        return None
+    return result.stdout.strip() or None
+
+
+def resolve_workspace_root() -> str:
+    env_root = os.environ.get("WORKFLOW_WORKSPACE_ROOT")
+    if env_root:
+        return os.path.abspath(os.path.expanduser(env_root))
+
+    cwd = os.path.abspath(os.getcwd())
+    git_root = _git_toplevel(cwd)
+    return git_root if git_root else cwd
 
 
 def main():
@@ -40,66 +77,48 @@ def main():
     if not task:
         task = prompt  # Use full prompt if no task after /assist
 
-    try:
-        import httpx
+    session_id = os.environ.get("CSC_SESSION_ID")
+    workspace_root = resolve_workspace_root()
+    if not os.path.isdir(workspace_root):
+        block_with_message(f"workflow init failed: invalid workspace_root {workspace_root}")
+    client = DaemonControlClient()
 
-        # Initialize workflow via MCP daemon
-        response = httpx.post(
-            f"{MCP_URL}/workflow/init",
-            json={
-                "prompt": task,
-                "intent_hint": None,
-                "metadata": {
-                    "source": "router_hook",
-                    "original_prompt": prompt,
-                }
-            },
-            timeout=3.0,
-        )
+    data = client.init_workflow(
+        prompt=task,
+        session_id=session_id,
+        workspace_root=workspace_root,
+        metadata={
+            "source": "router_hook",
+            "original_prompt": prompt,
+        },
+    )
 
-        if response.status_code == 200:
-            data = response.json()
-            workflow_id = data.get("workflow_id", "unknown")
-            required_agent = data.get("required_agent", "router-agent")
+    if data:
+        workflow_id = data.get("workflow_id", "unknown")
+        required_agent = data.get("required_agent", "router-agent")
 
-            # Output instruction for Claude
-            result = {
-                "decision": "modify",
-                "modifications": {
-                    "appendToPrompt": f"""
+        result = {
+            "decision": "modify",
+            "modifications": {
+                "appendToPrompt": f"""
+
+---
+[Phase 1: Router] Starting...
+---
 
 <workflow-context>
 Workflow initialized: {workflow_id}
+Session: {data.get("session_id", session_id or "default")}
 Current phase: router
 Required action: Invoke {required_agent} agent using Task tool.
 
 IMPORTANT: You MUST invoke the {required_agent} agent before any other tools.
 </workflow-context>"""
-                }
-            }
-            print(json.dumps(result))
-        else:
-            # MCP server error - log but don't block
-            sys.stderr.write(f"MCP init failed: {response.status_code}\n")
-
-    except ImportError:
-        # httpx not available - output fallback instruction
-        result = {
-            "decision": "modify",
-            "modifications": {
-                "appendToPrompt": """
-
-<workflow-context>
-MCP daemon not available. Proceeding with manual workflow.
-Required action: Invoke router-agent using Task tool.
-</workflow-context>"""
             }
         }
         print(json.dumps(result))
-
-    except Exception as e:
-        # Network error or timeout - log but don't block
-        sys.stderr.write(f"Router hook error: {e}\n")
+    else:
+        sys.stderr.write("Workflow init failed; proceeding without workflow\n")
 
     # CRITICAL: Exit 0 immediately, no waiting!
     sys.exit(0)
