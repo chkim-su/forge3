@@ -1,6 +1,6 @@
 {
   "name": "forge3",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "MCP-based workflow system for creating Claude Code plugin components with structured phases and state management",
   "author": {
     "name": "Claude Code Team"

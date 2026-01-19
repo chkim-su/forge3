@@ -72,7 +72,7 @@ This skill provides exact templates and file locations for creating Claude Code 
   "plugins": [
     {
       "name": "plugin-name",
-      "source": ".",
+      "source": "./",
       "description": "Plugin description",
       "version": "1.0.0"
     }
@@ -92,7 +92,7 @@ This skill provides exact templates and file locations for creating Claude Code 
 // WRONG #2: Using "path" instead of "source"
 {
   "plugins": [{
-    "path": ".",  // ❌ Use "source": "."
+    "path": ".",  // ❌ Use "source": "./"
     "config": {}  // ❌ "config" not allowed
   }]
 }
@@ -375,7 +375,7 @@ skills/my-skill/SKILL.md             # ✅ Correct
 | Wrong | Correct | Component |
 |-------|---------|-----------|
 | `"author": "Name"` | `"owner": { "name": "Name" }` | marketplace.json |
-| `"path": "."` | `"source": "."` | marketplace.json |
+| `"path": "."` | `"source": "./"` | marketplace.json |
 | `"config": { ... }` | Not allowed | marketplace.json |
 | `displayName`, `license`, `repository` in marketplace | Remove them | marketplace.json |
 | `allowed_tools:` | `allowed-tools:` | commands |

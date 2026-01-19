@@ -108,7 +108,7 @@ This skill provides exact schemas and validation rules for Claude Code plugin co
   "plugins": [
     {
       "name": "my-plugin",
-      "source": ".",
+      "source": "./",
       "description": "Plugin description",
       "version": "1.0.0"
     }
@@ -139,7 +139,7 @@ This skill provides exact schemas and validation rules for Claude Code plugin co
   "plugins": [
     {
       "name": "plugin",
-      "path": "."  // ❌ WRONG: Use "source": "."
+      "path": "."  // ❌ WRONG: Use "source": "./"
     }
   ]
 }
@@ -470,7 +470,7 @@ test -f path/to/file && echo "EXISTS" || echo "MISSING"
 | Wrong | Correct |
 |-------|---------|
 | `"author": "Name"` | `"owner": { "name": "Name" }` |
-| `"path": "."` | `"source": "."` |
+| `"path": "."` | `"source": "./"` |
 | `"config": { ... }` | Not allowed in plugins array |
 | `allowed_tools:` | `allowed-tools:` |
 | `agents/x/agent.md` | `agents/x.md` |
