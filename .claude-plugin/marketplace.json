@@ -1,63 +1,19 @@
 {
   "$schema": "https://claude.ai/schemas/marketplace.json",
-  "name": "forge3",
-  "displayName": "Forge3 Workflow System",
-  "version": "1.0.1",
-  "description": "MCP-based workflow system for creating Claude Code plugin components with structured phases and state management",
-  "author": "Claude Code Team",
-  "license": "MIT",
-  "repository": "https://github.com/chkim-su/forge3",
-  "keywords": [
-    "workflow",
-    "mcp",
-    "plugin-development",
-    "code-generation",
-    "state-machine"
-  ],
-  "categories": [
-    "development",
-    "workflow",
-    "automation"
-  ],
+  "name": "forge3-marketplace",
+  "owner": {
+    "name": "Claude Code Team"
+  },
+  "metadata": {
+    "description": "MCP-based workflow system for creating Claude Code plugin components with structured phases and state management",
+    "version": "1.0.1"
+  },
   "plugins": [
     {
-      "path": ".",
-      "config": {
-        "name": "forge3",
-        "displayName": "Forge3 Workflow",
-        "description": "MCP-based workflow system for plugin component creation",
-        "version": "1.0.1",
-        "components": {
-          "agents": "agents/",
-          "skills": "skills/",
-          "commands": "commands/",
-          "hooks": "hooks/"
-        },
-        "mcp": {
-          "server": {
-            "command": "workflow-mcp",
-            "env": {
-              "WORKFLOW_MCP_HOST": "127.0.0.1",
-              "WORKFLOW_MCP_PORT": "8765"
-            }
-          }
-        }
-      }
+      "name": "forge3",
+      "source": ".",
+      "description": "MCP-based workflow system for plugin component creation",
+      "version": "1.0.1"
     }
-  ],
-  "requirements": {
-    "python": ">=3.10",
-    "dependencies": [
-      "workflow-mcp",
-      "httpx>=0.26.0"
-    ]
-  },
-  "installation": {
-    "steps": [
-      "Install workflow-mcp: pip install -e ../mcp",
-      "Install plugin dependencies: pip install -r requirements.txt",
-      "Start MCP server: workflow-mcp",
-      "Use /assist to create components"
-    ]
-  }
+  ]
 }
