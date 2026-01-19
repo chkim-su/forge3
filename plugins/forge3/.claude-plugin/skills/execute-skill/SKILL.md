@@ -10,17 +10,65 @@ triggers:
 
 This skill provides exact templates and file locations for creating Claude Code plugin components.
 
+## Two Distribution Models
+
+### Model A: Standalone Plugin (Local Development)
+For plugins installed via local path or symlink.
+
+```
+my-plugin/
+├── plugin.json           # At root
+├── agents/
+├── commands/
+├── skills/
+└── hooks/
+```
+
+### Model B: Marketplace (GitHub Distribution)
+For plugins distributed via `/plugin add github:owner/repo`.
+
+```
+my-marketplace/
+├── marketplace.json      # At ROOT of repo
+├── README.md
+├── LICENSE
+└── plugins/
+    └── my-plugin/
+        └── .claude-plugin/
+            ├── plugin.json
+            ├── agents/
+            ├── commands/
+            ├── skills/
+            └── hooks/
+```
+
+**CRITICAL:** In a marketplace, all plugin content goes inside `plugins/<name>/.claude-plugin/`, NOT at repo root!
+
+---
+
 ## File Location Rules
+
+### For Standalone Plugin (Model A)
 
 | Component | Location | Example |
 |-----------|----------|---------|
 | plugin.json | `<root>/plugin.json` | `my-plugin/plugin.json` |
-| marketplace.json | `<root>/.claude-plugin/marketplace.json` | `my-plugin/.claude-plugin/marketplace.json` |
 | Agent | `<root>/agents/<name>.md` | `my-plugin/agents/my-agent.md` |
 | Command | `<root>/commands/<name>.md` | `my-plugin/commands/my-command.md` |
 | Skill | `<root>/skills/<name>/SKILL.md` | `my-plugin/skills/my-skill/SKILL.md` |
 | Hook config | `<root>/hooks/hooks.json` | `my-plugin/hooks/hooks.json` |
 | Hook script | `<root>/hooks/<name>.py` | `my-plugin/hooks/my-hook.py` |
+
+### For Marketplace (Model B)
+
+| Component | Location | Example |
+|-----------|----------|---------|
+| marketplace.json | `<repo-root>/marketplace.json` | `my-marketplace/marketplace.json` |
+| plugin.json | `<repo>/plugins/<name>/.claude-plugin/plugin.json` | `my-marketplace/plugins/my-plugin/.claude-plugin/plugin.json` |
+| Agent | `<repo>/plugins/<name>/.claude-plugin/agents/<agent>.md` | `.../agents/my-agent.md` |
+| Command | `<repo>/plugins/<name>/.claude-plugin/commands/<cmd>.md` | `.../commands/my-cmd.md` |
+| Skill | `<repo>/plugins/<name>/.claude-plugin/skills/<skill>/SKILL.md` | `.../skills/my-skill/SKILL.md` |
+| Hooks | `<repo>/plugins/<name>/.claude-plugin/hooks/` | `.../hooks/hooks.json` |
 
 ---
 
@@ -56,7 +104,9 @@ This skill provides exact templates and file locations for creating Claude Code 
 
 ### marketplace.json
 
-**Location:** `<plugin-root>/.claude-plugin/marketplace.json`
+**Location:** `<repo-root>/marketplace.json` (at repository ROOT, NOT inside .claude-plugin!)
+
+**IMPORTANT:** Use this ONLY for Model B (Marketplace distribution).
 
 ```json
 {
@@ -71,8 +121,8 @@ This skill provides exact templates and file locations for creating Claude Code 
   },
   "plugins": [
     {
-      "name": "plugin-name",
-      "source": "./",
+      "name": "my-plugin",
+      "source": "plugins/my-plugin/.claude-plugin",
       "description": "Plugin description",
       "version": "1.0.0"
     }
@@ -82,22 +132,34 @@ This skill provides exact templates and file locations for creating Claude Code 
 
 **❌ WRONG - Do NOT create like this:**
 ```json
-// WRONG #1: Using "author" instead of "owner"
+// WRONG #1: marketplace.json in wrong location
+// ❌ my-plugin/.claude-plugin/marketplace.json  (WRONG!)
+// ✅ my-marketplace/marketplace.json            (CORRECT - at repo root)
+
+// WRONG #2: source pointing to root instead of plugin directory
+{
+  "plugins": [{
+    "name": "my-plugin",
+    "source": "./"  // ❌ WRONG for marketplace - use "plugins/my-plugin/.claude-plugin"
+  }]
+}
+
+// WRONG #3: Using "author" instead of "owner"
 {
   "name": "my-marketplace",
   "author": "Name",  // ❌ Use "owner": { "name": "Name" }
   "plugins": []
 }
 
-// WRONG #2: Using "path" instead of "source"
+// WRONG #4: Using "path" instead of "source"
 {
   "plugins": [{
-    "path": ".",  // ❌ Use "source": "./"
+    "path": ".",  // ❌ Use "source": "plugins/name/.claude-plugin"
     "config": {}  // ❌ "config" not allowed
   }]
 }
 
-// WRONG #3: Adding fields not in schema
+// WRONG #5: Adding fields not in schema
 {
   "displayName": "...",  // ❌ Not in schema
   "license": "MIT",      // ❌ Not in schema
@@ -371,12 +433,12 @@ if __name__ == "__main__":
 
 ## Directory Structure
 
+### Model A: Standalone Plugin
+
 **✅ CORRECT structure:**
 ```
 my-plugin/
 ├── plugin.json                      # REQUIRED at root
-├── .claude-plugin/
-│   └── marketplace.json             # Optional, for marketplace
 ├── agents/
 │   ├── agent-one.md                 # Direct .md file
 │   └── agent-two.md
@@ -394,13 +456,56 @@ my-plugin/
     └── hook-two.py
 ```
 
-**❌ WRONG structures:**
-```
-# Missing plugin.json
-my-plugin/
-├── .claude-plugin/marketplace.json  # ❌ No plugin.json!
-└── agents/
+### Model B: Marketplace (GitHub Distribution)
 
+**✅ CORRECT structure:**
+```
+my-marketplace/                      # Repository root
+├── marketplace.json                 # At ROOT (defines plugins)
+├── README.md
+├── LICENSE
+└── plugins/
+    └── my-plugin/
+        └── .claude-plugin/          # Plugin content HERE
+            ├── plugin.json          # Required
+            ├── agents/
+            │   └── my-agent.md
+            ├── commands/
+            │   └── my-cmd.md
+            ├── skills/
+            │   └── my-skill/
+            │       └── SKILL.md
+            └── hooks/
+                ├── hooks.json
+                └── my-hook.py
+```
+
+**❌ WRONG marketplace structures:**
+```
+# WRONG: Plugin content at repo root (not in plugins/ directory)
+my-marketplace/
+├── marketplace.json
+├── plugin.json                      # ❌ Should be in plugins/<name>/.claude-plugin/
+├── agents/                          # ❌ Should be in plugins/<name>/.claude-plugin/
+└── skills/                          # ❌ Should be in plugins/<name>/.claude-plugin/
+
+# WRONG: marketplace.json inside .claude-plugin
+my-marketplace/
+├── .claude-plugin/
+│   └── marketplace.json             # ❌ Should be at repo root
+└── plugins/
+
+# WRONG: Missing .claude-plugin directory
+my-marketplace/
+├── marketplace.json
+└── plugins/
+    └── my-plugin/
+        ├── plugin.json              # ❌ Missing .claude-plugin/ wrapper
+        └── agents/
+```
+
+**❌ General WRONG structures:**
+```
 # Agent in subdirectory
 agents/my-agent/agent.md             # ❌ Wrong
 agents/my-agent.md                   # ✅ Correct
@@ -425,8 +530,11 @@ skills/my-skill/SKILL.md             # ✅ Correct
 
 | Wrong | Correct | Component |
 |-------|---------|-----------|
+| `.claude-plugin/marketplace.json` | `marketplace.json` at repo root | marketplace location |
+| `"source": "./"` (for marketplace) | `"source": "plugins/name/.claude-plugin"` | marketplace.json |
+| Plugin content at repo root | Inside `plugins/<name>/.claude-plugin/` | marketplace structure |
 | `"author": "Name"` | `"owner": { "name": "Name" }` | marketplace.json |
-| `"path": "."` | `"source": "./"` | marketplace.json |
+| `"path": "."` | `"source": "plugins/name/.claude-plugin"` | marketplace.json |
 | `"config": { ... }` | Not allowed | marketplace.json |
 | `displayName`, `license`, `repository` in marketplace | Remove them | marketplace.json |
 | `allowed_tools:` | `allowed-tools:` | commands |
