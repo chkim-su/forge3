@@ -1,7 +1,7 @@
 ---
 name: verify
 description: Verify and validate plugin components for schema compliance
-allowed_tools:
+allowed-tools:
   - Read
   - Grep
   - Glob

@@ -1,7 +1,7 @@
 ---
 name: assist
 description: Start a guided workflow to create Claude Code plugin components (skills, agents, commands, hooks)
-allowed_tools:
+allowed-tools:
   - Task
   - Read
   - Write
