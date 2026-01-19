@@ -245,41 +245,92 @@ triggers: "single trigger"  # ❌ Must be array
 
 **Location:** `<plugin-root>/hooks/hooks.json`
 
+**IMPORTANT:** `hooks` must be an **object keyed by event name**, NOT an array!
+
 ```json
 {
   "$schema": "https://claude.ai/schemas/hooks.json",
-  "hooks": [
-    {
-      "event": "PreToolUse",
-      "matcher": "^Bash$",
-      "command": "python3 ${CLAUDE_PLUGIN_ROOT}/hooks/validate.py"
-    },
-    {
-      "event": "UserPromptSubmit",
-      "matcher": "^/my-command",
-      "command": "python3 ${CLAUDE_PLUGIN_ROOT}/hooks/init.py"
-    }
-  ]
+  "description": "My plugin hooks",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "^Bash$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 ${CLAUDE_PLUGIN_ROOT}/hooks/validate.py",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "matcher": "^/my-command",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 ${CLAUDE_PLUGIN_ROOT}/hooks/init.py",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 ${CLAUDE_PLUGIN_ROOT}/hooks/stop.py",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
 }
 ```
 
 **Available events:** `PreToolUse`, `PostToolUse`, `Stop`, `SubagentStop`, `SessionStart`, `SessionEnd`, `UserPromptSubmit`, `PreCompact`, `Notification`
 
-**❌ WRONG:**
+**❌ WRONG - These patterns are INVALID:**
 ```json
-// WRONG: hooks as object instead of array
+// WRONG #1: hooks as array (VERY COMMON MISTAKE!)
+{
+  "hooks": [  // ❌ WRONG: Must be object, not array
+    {
+      "event": "PreToolUse",
+      "command": "..."
+    }
+  ]
+}
+
+// WRONG #2: Missing nested "hooks" array and "type"
 {
   "hooks": {
-    "PreToolUse": { ... }  // ❌ Must be array
+    "PreToolUse": [
+      {
+        "matcher": "^Bash$",
+        "command": "..."  // ❌ Must be inside hooks array with type: command
+      }
+    ]
   }
 }
 
-// WRONG: Hardcoded path
+// WRONG #3: Hardcoded path
 {
-  "hooks": [{
-    "event": "PreToolUse",
-    "command": "python3 /home/user/hooks/script.py"  // ❌ Use ${CLAUDE_PLUGIN_ROOT}
-  }]
+  "hooks": {
+    "PreToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 /home/user/hooks/script.py"  // ❌ Use ${CLAUDE_PLUGIN_ROOT}
+          }
+        ]
+      }
+    ]
+  }
 }
 ```
 
@@ -386,6 +437,8 @@ skills/my-skill/SKILL.md             # ✅ Correct
 | `tools: Read, Grep` | `tools: [Read, Grep]` | agents |
 | `triggers: "phrase"` | `triggers: ["phrase"]` | skills |
 | Hardcoded paths in hooks | `${CLAUDE_PLUGIN_ROOT}/...` | hooks |
+| `"hooks": [...]` (array) | `"hooks": { "EventName": [...] }` | hooks.json |
+| Missing `"type": "command"` | Required in hook command object | hooks.json |
 
 ---
 
