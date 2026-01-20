@@ -4,13 +4,18 @@ Skill Loader - Utility for loading skill content for phase injection.
 
 Maps workflow phases to their corresponding skills and provides
 functions to read skill content with frontmatter stripped.
+
+Uses injection_metadata.py for phase-to-skill mapping (read-only hints).
 """
 
 import os
 import re
 from typing import Optional
 
-# Map phases to their skill directory names
+from injection_metadata import get_skill_for_phase
+
+
+# Legacy mapping for backward compatibility
 PHASE_TO_SKILL = {
     "router": "router-skill",
     "semantic": "semantic-skill",
@@ -40,16 +45,15 @@ def strip_frontmatter(content: str) -> str:
     return stripped.strip()
 
 
-def read_phase_skill(phase: str) -> Optional[str]:
-    """Read skill content for a phase, stripping frontmatter.
+def read_skill_content(skill_name: str) -> Optional[str]:
+    """Read skill content by skill directory name, stripping frontmatter.
 
     Args:
-        phase: The phase name (router, semantic, execute, verify)
+        skill_name: The skill directory name (e.g., "router-skill")
 
     Returns:
         Skill content without frontmatter, or None if not found
     """
-    skill_name = PHASE_TO_SKILL.get(phase)
     if not skill_name:
         return None
 
@@ -64,21 +68,58 @@ def read_phase_skill(phase: str) -> Optional[str]:
         return None
 
 
-def format_skill_tag(phase: str, content: str) -> str:
+def read_phase_skill(phase: str) -> Optional[str]:
+    """Read skill content for a phase, stripping frontmatter.
+
+    Legacy function - uses hardcoded PHASE_TO_SKILL mapping.
+
+    Args:
+        phase: The phase name (router, semantic, execute, verify)
+
+    Returns:
+        Skill content without frontmatter, or None if not found
+    """
+    skill_name = PHASE_TO_SKILL.get(phase)
+    return read_skill_content(skill_name)
+
+
+def read_phase_skill_v2(phase: str, command: Optional[str] = None) -> Optional[str]:
+    """Read skill content for a phase using injection_metadata.
+
+    Uses the centralized injection_metadata for phase-to-skill mapping.
+    Supports command-specific phases (e.g., verify/discover vs health-check/discover).
+
+    Args:
+        phase: The phase name
+        command: Optional command name for command-specific phases
+
+    Returns:
+        Skill content without frontmatter, or None if not found
+    """
+    skill_name = get_skill_for_phase(phase, command)
+    return read_skill_content(skill_name)
+
+
+def format_skill_tag(phase: str, content: str, command: Optional[str] = None) -> str:
     """Format skill content in a phase-skill-reference tag.
 
     Args:
         phase: The phase name
         content: The skill content
+        command: Optional command name for context
 
     Returns:
         Content wrapped in <phase-skill-reference> tag
     """
-    return f"<phase-skill-reference phase=\"{phase}\">\n{content}\n</phase-skill-reference>"
+    if command:
+        return f'<phase-skill-reference phase="{phase}" command="{command}">\n{content}\n</phase-skill-reference>'
+    return f'<phase-skill-reference phase="{phase}">\n{content}\n</phase-skill-reference>'
 
 
 def get_phase_skill_injection(phase: str) -> Optional[str]:
     """Get formatted skill injection for a phase.
+
+    Legacy function - uses hardcoded PHASE_TO_SKILL mapping.
 
     Args:
         phase: The phase name
@@ -89,4 +130,23 @@ def get_phase_skill_injection(phase: str) -> Optional[str]:
     content = read_phase_skill(phase)
     if content:
         return format_skill_tag(phase, content)
+    return None
+
+
+def get_phase_skill_injection_v2(phase: str, command: Optional[str] = None) -> Optional[str]:
+    """Get formatted skill injection for a phase using injection_metadata.
+
+    Uses the centralized injection_metadata for phase-to-skill mapping.
+    Supports command-specific phases.
+
+    Args:
+        phase: The phase name
+        command: Optional command name for command-specific phases
+
+    Returns:
+        Formatted skill content in tag, or None if not found
+    """
+    content = read_phase_skill_v2(phase, command)
+    if content:
+        return format_skill_tag(phase, content, command)
     return None

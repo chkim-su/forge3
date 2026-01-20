@@ -1,7 +1,7 @@
 {
   "name": "forge3",
-  "version": "1.0.12",
-  "description": "MCP-based workflow system for creating Claude Code plugin components with structured phases and state management",
+  "version": "1.1.0",
+  "description": "Multi-command workflow system for creating Claude Code plugin components with daemon-owned policy and explicit phase transitions",
   "author": {
     "name": "Claude Code Team"
   },
@@ -12,6 +12,8 @@
     "mcp",
     "plugin-development",
     "code-generation",
-    "state-machine"
+    "state-machine",
+    "multi-command",
+    "schema-validation"
   ]
 }

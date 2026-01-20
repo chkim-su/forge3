@@ -1,14 +1,14 @@
 {
   "$schema": "https://claude.ai/schemas/hooks.json",
-  "description": "Forge3 workflow enforcement hooks",
+  "description": "Forge3 multi-command workflow enforcement hooks",
   "hooks": {
     "UserPromptSubmit": [
       {
-        "matcher": "^/assist\\b",
+        "matcher": "^/(assist|plan|create|verify|health-check)\\b",
         "hooks": [
           {
             "type": "command",
-            "command": "python3 ${CLAUDE_PLUGIN_ROOT}/hooks/router_hook.py",
+            "command": "python3 ${CLAUDE_PLUGIN_ROOT}/hooks/workflow_hook.py",
             "timeout": 10
           }
         ]

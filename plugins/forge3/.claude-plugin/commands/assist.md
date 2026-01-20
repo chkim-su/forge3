@@ -1,104 +1,117 @@
 ---
 name: assist
-description: Start a guided workflow to create Claude Code plugin components (skills, agents, commands, hooks)
+description: Dispatcher - classifies intent and recommends which command to use for plugin component creation
 allowed-tools:
   - Task
   - Read
-  - Write
-  - Edit
   - Grep
   - Glob
 ---
 
 # /assist
 
-Start a guided workflow to create Claude Code plugin components.
+**Dispatcher command** - Classifies your intent and recommends the appropriate command to run.
 
 ## Usage
 
 ```
-/assist <description of what you want to create>
+/assist <description of what you want to do>
 ```
 
 ## Examples
 
 ```
 /assist create a skill for generating commit messages
-/assist add an agent for code review
-/assist create a command to deploy to staging
-/assist add a hook to prevent commits without tests
+/assist I need to add an agent for code review
+/assist help me create a command to deploy to staging
+/assist verify my plugin components
 ```
 
-## Workflow Phases
+## How It Works
 
-The assist command guides you through a structured workflow with visible phase indicators:
+`/assist` is a **dispatcher only** - it routes to other commands:
 
-```
----
-[Phase 1: Router] Starting...
----
-```
+| Your Intent | Recommended Command |
+|-------------|---------------------|
+| Plan a component | `/plan` |
+| Create files | `/create` |
+| Validate components | `/verify` |
+| Check quality | `/health-check` |
 
-| Phase | Agent | Purpose |
-|-------|-------|---------|
-| 1. Router | router-agent | Classifies your intent |
-| 2. Semantic | semantic-agent | Plans the implementation structure |
-| 3. Execute | execute-agent | Creates the actual files |
-| 4. Verify | verify-agent | Validates the implementation |
+## Workflow
 
-### Phase Transitions
-
-When each phase completes, you'll see:
+The `/assist` command runs a single phase:
 
 ```
 ---
-[Phase N: Name] Complete
-[Phase N+1: Name] Starting...
+[Phase 1/1: Router] Starting...
 ---
 ```
 
-When the workflow finishes:
+The router-agent:
+1. Analyzes your request
+2. Classifies your intent
+3. Recommends which command to run next
+
+### After Router Completes
 
 ```
 ---
-[Phase 4: Verify] Complete
-Workflow finished.
+[Phase 1/1: Router] Agent complete
 ---
+Dispatcher phase complete. Based on the router's classification,
+recommend one of these commands to the user:
+- /plan - For component structure planning
+- /create - For file creation
+- /verify - For validation
 ```
 
-## What Happens
+## Important
 
-When you run `/assist`:
+**`/assist` does NOT create files or execute workflows.**
 
-1. The router-agent analyzes your request
-2. The semantic-agent designs the component structure
-3. The execute-agent creates the files
-4. The verify-agent validates the result
+It only:
+- Classifies your intent
+- Gathers initial context
+- Recommends the next command
 
-Each agent produces concise output - exploration and file reading happens internally.
+## Recommended Workflow
+
+For creating new components:
+
+```bash
+# Step 1: Get recommendation
+/assist create a skill for code review
+
+# Step 2: Plan the component
+/plan a skill for code review
+
+# Step 3: Create the files
+/create based on the plan above
+
+# Step 4: Validate the result
+/verify skills/code-review-skill
+```
+
+## Available Commands
+
+After `/assist` routes your request, use:
+
+| Command | Purpose |
+|---------|---------|
+| `/plan` | Design component structure |
+| `/create` | Generate component files |
+| `/verify` | Validate against schemas |
+| `/health-check` | Analyze component quality |
 
 ## Requirements
 
 - Workflow daemon must be running (`workflowd`)
-- Serena MCP server must be available (for efficient codebase exploration)
-- Each phase must complete before the next begins
-- You cannot skip phases
+- Serena MCP server available (for codebase exploration)
 
-## Component Types
+## Related Commands
 
-| Type | Creates | Location |
-|------|---------|----------|
-| Skill | SKILL.md | skills/<name>/ |
-| Agent | <name>.md | agents/ |
-| Command | <name>.md | commands/ |
-| Hook | hooks.json + .py | hooks/ |
-
-## Troubleshooting
-
-If the workflow gets stuck:
-1. Check workflow daemon is running
-2. Check Serena MCP server is available
-3. Verify current phase status
-4. Invoke the required agent manually
-
-Use `/verify` to check component validity after creation.
+- `/plan` - Component structure planning
+- `/create` - File creation
+- `/verify` - Schema validation
+- `/health-check` - Quality analysis

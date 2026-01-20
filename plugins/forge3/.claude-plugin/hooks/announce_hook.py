@@ -1,50 +1,38 @@
 #!/usr/bin/env python3
 """
-Announce Hook - Phase transition announcer for SubagentStop events.
+Announce Hook - EVENT LOGGING ONLY for SubagentStop events.
 
 Event: SubagentStop
 Trigger: subagent_type matches ^forge3:
 
-Announces phase completion and next phase when forge3 agents complete.
+CRITICAL BEHAVIOR:
+- Records agent_completed event with daemon
+- Updates phase_status -> agent_complete
+- NEVER advances phases
+- NO phase transitions here
+
+DESIGN PRINCIPLE:
+- This hook logs events ONLY
+- Phase transitions require explicit workflow_transition tool call
+- Daemon owns workflow policy
 """
 
 import json
 import sys
 import os
 
-from client import DaemonControlClient
-from skill_loader import get_phase_skill_injection
-
-# Phase display names and order
-PHASE_INFO = {
-    "router": {"display": "Router", "number": 1},
-    "semantic": {"display": "Semantic", "number": 2},
-    "execute": {"display": "Execute", "number": 3},
-    "verify": {"display": "Verify", "number": 4},
-}
-
-PHASE_ORDER = ["router", "semantic", "execute", "verify"]
+from control_client import WorkflowControlClient
+from skill_loader import get_phase_skill_injection_v2
 
 
-def get_next_phase(current: str) -> str | None:
-    """Get the next phase in the workflow, or None if complete."""
-    try:
-        idx = PHASE_ORDER.index(current)
-        if idx + 1 < len(PHASE_ORDER):
-            return PHASE_ORDER[idx + 1]
-    except ValueError:
-        pass
-    return None
-
-
-def format_phase_banner(phase: str, status: str) -> str:
-    """Format a phase banner line."""
-    info = PHASE_INFO.get(phase, {"display": phase.capitalize(), "number": "?"})
-    return f"[Phase {info['number']}: {info['display']}] {status}"
+client = WorkflowControlClient()
 
 
 def main():
-    """Handle SubagentStop event for forge3 agents."""
+    """Handle SubagentStop event for forge3 agents.
+
+    EVENT LOGGING ONLY - does NOT advance phases.
+    """
     try:
         input_data = json.load(sys.stdin)
     except (json.JSONDecodeError, EOFError):
@@ -57,30 +45,66 @@ def main():
     if not subagent_type.startswith("forge3:"):
         sys.exit(0)
 
-    # Extract agent name (e.g., "forge3:router-agent" -> "router")
-    agent_name = subagent_type.replace("forge3:", "").replace("-agent", "")
+    # Extract agent name (e.g., "forge3:router-agent" -> "router-agent")
+    agent_name = subagent_type.replace("forge3:", "")
 
-    # Query workflow daemon for current phase
-    client = DaemonControlClient()
-    status = client.get_status()
+    # Query workflow daemon for current state
+    state = client.get_status()
 
-    if not status:
-        # Daemon not available, skip announcement
+    if not state:
+        # Daemon not available, skip
         sys.exit(0)
 
-    current_phase = status.get("current_phase", agent_name)
-    next_phase = get_next_phase(current_phase)
+    current_phase = state.current_phase
+    command = state.command
+    phases = state.phases
+    final_phase = state.final_phase
+    allowed_next_phases = state.allowed_next_phases
+    is_dispatcher = state.is_dispatcher
+
+    # Record agent completion event (EVENT LOGGING ONLY)
+    # This does NOT advance the phase
+    client.record_agent_complete(agent_name, current_phase)
+
+    # Calculate phase number for display
+    phase_num = phases.index(current_phase) + 1 if current_phase in phases else "?"
+    total_phases = len(phases)
+    if final_phase and final_phase not in phases:
+        total_phases += 1
 
     # Build announcement message
-    complete_banner = format_phase_banner(current_phase, "Complete")
+    complete_banner = f"[Phase {phase_num}/{total_phases}: {current_phase.capitalize()}] Agent complete"
 
-    if next_phase:
-        next_banner = format_phase_banner(next_phase, "Starting...")
-        # Get skill content for next phase
-        skill_injection = get_phase_skill_injection(next_phase) or ""
-        announcement = f"\n---\n{complete_banner}\n{next_banner}\n---\n\n{skill_injection}"
+    # Build next steps message
+    if is_dispatcher:
+        # Dispatcher (/assist) - recommend which command to run
+        next_steps = (
+            "\nDispatcher phase complete. Based on the router's classification, "
+            "recommend one of these commands to the user:\n"
+            "- /plan - For component structure planning\n"
+            "- /create - For file creation\n"
+            "- /verify - For validation\n"
+        )
+    elif allowed_next_phases:
+        # Non-dispatcher - show allowed transitions
+        next_phases_str = ", ".join(allowed_next_phases)
+        next_steps = (
+            f"\nAllowed next phases: {next_phases_str}\n\n"
+            "To proceed to the next phase, use the workflow_transition tool:\n"
+            "```\n"
+            "workflow_transition(\n"
+            f"  from_phase=\"{current_phase}\",\n"
+            f"  to_phase=\"{allowed_next_phases[0] if allowed_next_phases else 'next_phase'}\",\n"
+            "  evidence={...},\n"
+            "  conditions_met=[...]\n"
+            ")\n"
+            "```\n"
+        )
     else:
-        announcement = f"\n---\n{complete_banner}\nWorkflow finished.\n---\n"
+        # No more phases - workflow complete
+        next_steps = "\nWorkflow complete. All phases finished.\n"
+
+    announcement = f"\n---\n{complete_banner}\n---\n{next_steps}"
 
     # Output the announcement as appendToPrompt
     result = {

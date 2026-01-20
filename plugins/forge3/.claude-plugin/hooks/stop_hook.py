@@ -19,10 +19,10 @@ import json
 import sys
 import os
 
-from client import DaemonControlClient
+from control_client import WorkflowControlClient
 
 
-client = DaemonControlClient()
+client = WorkflowControlClient()
 
 
 def block_with_message(message: str):
@@ -45,14 +45,11 @@ def main():
     # Check with workflow daemon
     result = client.can_stop()
 
-    can_stop = result.get("can_stop", True)
-    reason = result.get("reason", "Unknown")
-
-    if can_stop:
+    if result.can_stop:
         allow()
     else:
         block_with_message(
-            f"Cannot stop: {reason}\n\n"
+            f"Cannot stop: {result.reason}\n\n"
             "The workflow is incomplete. Please either:\n"
             "1. Complete the current phase by invoking the required agent and calling workflow_transition\n"
             "2. Cancel the workflow explicitly\n"

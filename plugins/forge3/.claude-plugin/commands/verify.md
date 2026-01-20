@@ -1,11 +1,13 @@
 ---
 name: verify
-description: Verify and validate plugin components for schema compliance
+description: Verify and validate plugin components for schema compliance with multi-phase workflow
 allowed-tools:
+  - Task
   - Read
   - Grep
   - Glob
   - Bash
+argument-hint: "[component-path]"
 ---
 
 # /verify
@@ -29,62 +31,106 @@ Without arguments, verifies all components in the plugin.
 /verify hooks/                       # Verify all hooks
 ```
 
+## Workflow Phases
+
+The `/verify` command executes a multi-phase validation workflow:
+
+| Phase | Agent | Purpose |
+|-------|-------|---------|
+| 1. Discover | verify-discovery-agent | Finds all components to validate |
+| 2. Validate | verify-validate-agent | Validates each component schema |
+| 3. Connectivity | verify-connectivity-agent | Checks cross-references |
+| 4. Schema-check | schema-check-agent | Final validation pass |
+
+### Phase Transitions
+
+Phase transitions require explicit `workflow_transition` tool calls with evidence.
+
+```
+---
+[Phase 1/4: Discover] Starting...
+---
+```
+
+When a phase completes:
+```
+---
+[Phase 1/4: Discover] Agent complete
+---
+Allowed next phases: validate
+
+To proceed, use workflow_transition tool.
+```
+
 ## Validation Checks
 
-### Skills
+### Discovery Phase
+- Locates plugin root
+- Enumerates all component files
+- Catalogs by type (skills, agents, commands, hooks)
+
+### Validate Phase
 - YAML frontmatter syntax
-- Required fields: name, triggers
-- Content structure
+- Required fields per component type
+- JSON syntax for hooks.json
+- Python syntax for hook scripts
+
+### Connectivity Phase
+- Skill → Agent references
+- Hook → Script references
+- Tool name validity
+- Marketplace references (if present)
+
+### Schema-check Phase
+- Final schema compliance
+- Cross-reference validation
+- Overall verification status
+
+## Component Requirements
+
+### Skills
+- Required fields: name, description, triggers
 
 ### Agents
-- YAML frontmatter syntax
 - Required fields: name, description, tools
-- System prompt presence
 
 ### Commands
-- YAML frontmatter syntax
 - Required fields: name, description
-- Implementation content
 
-### Hooks
-- JSON syntax in hooks.json
-- Python syntax in hook scripts
-- Valid event types
-- Correct exit codes
+### plugin.json
+- Required: name, version, description, author (as object)
 
 ## Output
 
 ```
-VERIFICATION REPORT
+VERIFICATION_REPORT
 ==================
 
-Component: skills/my-skill
-Status: PASS
+Phase: schema-check (final)
 
-Checks:
-[PASS] File exists
-[PASS] YAML valid
-[PASS] name field present
-[PASS] triggers field present
-[PASS] Content structure valid
+RESULTS:
+[PASS] plugin.json - All required fields present
+[PASS] agents/router-agent.md - Valid frontmatter
+[FAIL] skills/my-skill/SKILL.md - Missing triggers
 
-Issues: None
-Recommendations: None
+SUMMARY:
+- Checked: 10 components
+- Passed: 9
+- Failed: 1
+
+WORKFLOW_STATUS: FAIL
 ```
 
-## Exit Codes
+## Requirements
 
-- 0: All checks passed
-- 1: Some checks failed
-- 2: Critical errors found
+- Workflow daemon must be running (`workflowd`)
+- Phase transitions require explicit tool calls
+- All 4 phases must complete
+- Schema-check is mandatory final phase
 
-## Integration
+## Related Commands
 
-This command can be used:
-- Manually to check components
-- As part of the /assist workflow (verify phase)
-- In CI/CD pipelines for validation
-
-## Related
-
-- `/assist` - Create components with guided workflow
+- `/assist` - Dispatcher that routes to appropriate command
+- `/plan` - Plans component structure
+- `/create` - Creates component files
+- `/health-check` - Quality analysis (beyond schema compliance)

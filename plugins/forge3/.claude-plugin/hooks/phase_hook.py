@@ -10,8 +10,13 @@ CRITICAL BEHAVIOR:
   - ALLOW Task tool with required agent
   - BLOCK everything else
 - If tool is workflow_transition:
-  - Validate with workflow daemon
+  - Validate with workflow daemon (ONLY source of truth)
   - BLOCK invalid transitions
+
+DESIGN PRINCIPLE:
+- Daemon owns ALL workflow policy
+- This hook queries daemon for allowed phases (NO hardcoding)
+- Validates transitions via daemon only
 
 Exit codes:
 - 0: Allow tool execution
@@ -22,18 +27,27 @@ import json
 import sys
 import os
 
-from client import DaemonControlClient
-
-# Agent name to subagent_type mapping
-AGENT_MAPPING = {
-    "router-agent": "forge3:router-agent",
-    "semantic-agent": "forge3:semantic-agent",
-    "execute-agent": "forge3:execute-agent",
-    "verify-agent": "forge3:verify-agent",
-}
+from control_client import WorkflowControlClient
+from injection_metadata import get_agent_for_phase
 
 
-client = DaemonControlClient()
+# Build agent mapping dynamically for all known agents
+def get_agent_subagent_type(agent_name: str, command: str = None) -> str:
+    """Get the subagent_type for an agent name.
+
+    Args:
+        agent_name: The agent name (e.g., "router-agent")
+        command: Optional command for command-specific agents
+
+    Returns:
+        The subagent_type string (e.g., "forge3:router-agent")
+    """
+    # All forge3 agents use forge3: prefix
+    return f"forge3:{agent_name}"
+
+
+client = WorkflowControlClient()
+
 
 def block_with_message(message: str):
     """Output block response and exit."""
@@ -61,24 +75,26 @@ def main():
     tool_name = input_data.get("tool_name", "")
     tool_input = input_data.get("tool_input", {})
 
-    # Get workflow status
-    status = client.get_status()
+    # Get workflow status from daemon
+    state = client.get_status()
 
     # If no active workflow, allow tool execution
-    if status is None or status.get("message") == "No active workflow found":
+    if state is None:
         allow()
 
-    workflow_id = status.get("workflow_id")
-    current_phase = status.get("current_phase")
-    phase_status = status.get("phase_status")
-    required_agent = status.get("required_agent")
+    workflow_id = state.workflow_id
+    command = state.command
+    current_phase = state.current_phase
+    phase_status = state.phase_status
+    required_agent = state.required_agent
+    allowed_next_phases = state.allowed_next_phases
 
     # Handle Task tool (agent invocation)
     if tool_name == "Task":
         subagent_type = tool_input.get("subagent_type", "")
 
-        # Check if this is the required agent
-        expected_subagent = AGENT_MAPPING.get(required_agent, "")
+        # Get expected subagent type for required agent
+        expected_subagent = get_agent_subagent_type(required_agent, command) if required_agent else ""
 
         if phase_status == "agent_required":
             # Only allow the required agent
@@ -108,24 +124,28 @@ def main():
         evidence = tool_input.get("evidence", {})
         conditions = tool_input.get("conditions_met", [])
 
-        # Validate with workflow daemon
-        result = client.validate_transition(
-            workflow_id=workflow_id,
-            session_id=status.get("session_id"),
+        # Validate to_phase is in allowed_next_phases (daemon-provided)
+        if to_phase not in allowed_next_phases:
+            block_with_message(
+                f"Invalid transition from {from_phase} to {to_phase}. "
+                f"Allowed next phases: {allowed_next_phases}"
+            )
+
+        # Validate with workflow daemon (AUTHORITATIVE)
+        result = client.transition(
             from_phase=from_phase,
             to_phase=to_phase,
             evidence=evidence,
-            conditions=conditions,
+            conditions_met=conditions,
             commit_sha=commit_sha,
         )
 
-        if result.get("success"):
+        if result.success:
             allow()
         else:
-            missing = result.get("missing_conditions", [])
-            message = result.get("message", "Transition validation failed")
-            if missing:
-                message += f"\nMissing conditions: {missing}"
+            message = result.message
+            if result.missing_conditions:
+                message += f"\nMissing conditions: {result.missing_conditions}"
             block_with_message(message)
 
     # For any other tool, allow by default

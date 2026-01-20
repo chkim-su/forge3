@@ -1,6 +1,6 @@
 ---
 name: health-check
-description: Run health and suitability analysis on plugin components
+description: Run health and suitability analysis on plugin components with multi-phase workflow
 allowed-tools:
   - Task
   - Read
@@ -40,12 +40,60 @@ Analyzes only the router-skill component.
 ```
 Analyzes all agents in the plugin.
 
-## What Happens
+## Workflow Phases
 
-1. **Discovery** - Finds all components matching the path (or all if no path given)
-2. **Analysis** - Invokes the health-analyzer agent to examine each component
-3. **Scoring** - Calculates health scores based on structure, content, references, and suitability
-4. **Reporting** - Produces a detailed report with grades and recommendations
+The `/health-check` command executes a multi-phase analysis workflow:
+
+| Phase | Agent | Purpose |
+|-------|-------|---------|
+| 1. Discover | health-discovery-agent | Finds components and gathers metadata |
+| 2. Analyze | health-analyze-agent | Scores each component's health |
+| 3. Aggregate | health-aggregate-agent | Produces final report |
+| 4. Schema-check | schema-check-agent | Final validation pass |
+
+### Phase Transitions
+
+Phase transitions require explicit `workflow_transition` tool calls with evidence.
+
+```
+---
+[Phase 1/4: Discover] Starting...
+---
+```
+
+When a phase completes:
+```
+---
+[Phase 1/4: Discover] Agent complete
+---
+Allowed next phases: analyze
+
+To proceed, use workflow_transition tool.
+```
+
+## Analysis Phases
+
+### Discovery Phase
+- Locates plugin root
+- Enumerates all component files
+- Gathers metadata (trigger counts, tool counts, content length)
+
+### Analyze Phase
+- Scores structure (25 pts)
+- Scores content (25 pts)
+- Scores references (25 pts)
+- Scores suitability (25 pts)
+- Calculates grades (A-F)
+
+### Aggregate Phase
+- Calculates weighted overall score
+- Identifies patterns across components
+- Prioritizes recommendations
+- Generates final report
+
+### Schema-check Phase
+- Ensures critical issues are addressed
+- Final validation of changes
 
 ## Output
 
@@ -54,38 +102,26 @@ HEALTH_ANALYSIS_REPORT
 ======================
 
 SUMMARY:
-- total_components: 8
-- overall_health_score: 82
-- overall_grade: B
+- Total Components: 8
+- Overall Health Score: 82/100
+- Overall Grade: B
 
-COMPONENT_REPORTS:
+GRADE_DISTRIBUTION:
+- A (90-100): 3 components
+- B (80-89): 3 components
+- C (70-79): 2 components
 
-Component: router-skill
-Type: skill
-Health Score: 90 (A)
-[PASS] All structure checks
-[PASS] All content checks
-[PASS] All reference checks
-Suitability: appropriate
-Issues: None
-Recommendations: None
+PATTERNS_DETECTED:
+- 2 skills missing examples section
+- 1 agent has overly broad tool list
 
-Component: my-agent
-Type: agent
-Health Score: 75 (C)
-[PASS] Location correct
-[FAIL] Missing important notes section
-[WARN] Description could be clearer
-Suitability: appropriate
-Issues:
-- Missing important notes section
-Recommendations:
-- Add an "Important Notes" section
-- Expand description to be more specific
+PRIORITIZED_RECOMMENDATIONS:
 
-OVERALL_RECOMMENDATIONS:
-1. Add missing sections to my-agent
-2. Consider adding more trigger phrases to skills
+[HIGH] Add examples to skills
+  Affects: router-skill, semantic-skill
+
+[MEDIUM] Refine agent tool lists
+  Affects: execute-agent
 ```
 
 ## Score Interpretation
@@ -109,16 +145,16 @@ OVERALL_RECOMMENDATIONS:
 
 Use `/verify` first to ensure components are structurally valid, then `/health-check` for deeper quality analysis.
 
-## Integration
+## Requirements
 
-This command can be used:
-- After `/assist` to validate new components
-- Before publishing plugins
-- In CI/CD pipelines for quality gates
-- During code review
+- Workflow daemon must be running (`workflowd`)
+- Phase transitions require explicit tool calls
+- All 4 phases must complete
+- Schema-check is mandatory final phase
 
-## Related
+## Related Commands
 
 - `/verify` - Schema-focused structural validation
-- `/assist` - Guided component creation workflow
-- `health-analyzer` agent - The underlying analysis agent
+- `/assist` - Dispatcher that routes to appropriate command
+- `/plan` - Plans component structure
+- `/create` - Creates component files
