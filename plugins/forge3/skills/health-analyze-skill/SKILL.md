@@ -1,6 +1,6 @@
 ---
 name: health-analyze-skill
-description: Analysis phase for /health-check command - scores each component
+description: Analysis phase for /assist:health-check command - scores each component
 triggers:
   - health-check analyze phase
   - component health scoring
@@ -9,7 +9,7 @@ triggers:
 
 # Health-Check Analysis Phase
 
-The second phase of the `/health-check` workflow. Performs detailed health analysis and scoring of each component.
+The second phase of the `/assist:health-check` workflow. Performs detailed health analysis and scoring of each component.
 
 ## Purpose
 

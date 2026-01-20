@@ -4,7 +4,7 @@
   "hooks": {
     "UserPromptSubmit": [
       {
-        "matcher": "^/(assist|plan|create|verify|health-check)\\b",
+        "matcher": "^/assist:(wizard|plan|create|verify|health-check)\\b",
         "hooks": [
           {
             "type": "command",
@@ -16,7 +16,7 @@
     ],
     "PreToolUse": [
       {
-        "matcher": "^(Task|workflow_transition)$",
+        "matcher": "^(Task|workflow_transition|mcp__workflow__workflow_transition)$",
         "hooks": [
           {
             "type": "command",

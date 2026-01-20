@@ -14,18 +14,29 @@ Daemon API (AUTHORITATIVE):
 - /event/record     - Record events (agent_completed, etc.)
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 import httpx
 
-from _config import ENGINE_URL
+try:
+    from _config import ENGINE_URL
+except ImportError:
+    import importlib.util
+    from pathlib import Path
+
+    _config_path = Path(__file__).parent / "_config.py"
+    _spec = importlib.util.spec_from_file_location("_config", _config_path)
+    _module = importlib.util.module_from_spec(_spec)
+    assert _spec and _spec.loader
+    _spec.loader.exec_module(_module)
+    ENGINE_URL = _module.ENGINE_URL
 
 
 @dataclass
 class WorkflowState:
     """Workflow state returned by daemon."""
     workflow_id: str
-    command: str                      # "assist", "plan", "create", "verify", "health-check"
+    command: str                      # "assist:wizard", "assist:plan", "assist:create", "assist:verify", "assist:health-check"
     workflow_type: str                # "dispatch", "plan", "create", "verify", "health"
     phases: List[str]                 # From daemon policy
     final_phase: Optional[str]        # "schema-check" or None for dispatcher
@@ -35,6 +46,8 @@ class WorkflowState:
     is_dispatcher: bool               # True for /assist
     session_id: Optional[str]
     required_agent: Optional[str]     # Agent required for current phase
+    prompt: Optional[str] = None
+    metadata: Dict[str, Any] = field(default_factory=dict)
     
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "WorkflowState":
@@ -51,6 +64,8 @@ class WorkflowState:
             is_dispatcher=data.get("is_dispatcher", False),
             session_id=data.get("session_id"),
             required_agent=data.get("required_agent"),
+            prompt=data.get("prompt"),
+            metadata=data.get("metadata") or {},
         )
 
 
@@ -109,16 +124,16 @@ class WorkflowControlClient:
         metadata: Optional[Dict[str, Any]] = None,
     ) -> Optional[WorkflowState]:
         """Initialize workflow with command name.
-        
+
         The daemon resolves the workflow policy from the command name.
-        
+
         Args:
-            command: Command name ("assist", "plan", "create", "verify", "health-check")
+            command: Command name ("assist:wizard", "assist:plan", "assist:create", "assist:verify", "assist:health-check")
             session_id: Session identifier
             workspace_root: Workspace root path
             task: Optional task description (for non-dispatcher commands)
             metadata: Optional metadata
-            
+
         Returns:
             WorkflowState with policy-resolved phases, or None on error
         """
@@ -140,30 +155,37 @@ class WorkflowControlClient:
             pass
         return None
 
-    def get_status(self) -> Optional[WorkflowState]:
-        """Get current workflow status with allowed phases.
-        
+    def get_status(self, workflow_id: str) -> Optional[WorkflowState]:
+        """Get workflow status with allowed phases.
+
+        Args:
+            workflow_id: Workflow identifier
+
         Returns:
             WorkflowState with current state and allowed_next_phases, or None
         """
+        if not workflow_id:
+            return None
         try:
-            resp = httpx.get(f"{self.base_url}/workflow/status", timeout=3.0)
+            resp = httpx.get(
+                f"{self.base_url}/workflow/status",
+                params={"workflow_id": workflow_id},
+                timeout=3.0,
+            )
             if resp.status_code == 200:
-                data = resp.json()
-                # Handle "no active workflow" case
-                if data.get("message") == "No active workflow found":
-                    return None
-                return WorkflowState.from_dict(data)
+                return WorkflowState.from_dict(resp.json())
         except Exception:
             pass
         return None
 
     def transition(
         self,
+        workflow_id: str,
         from_phase: str,
         to_phase: str,
         evidence: Dict[str, Any],
         conditions_met: List[str],
+        session_id: Optional[str] = None,
         commit_sha: Optional[str] = None,
     ) -> TransitionResult:
         """Request a phase transition.
@@ -171,10 +193,12 @@ class WorkflowControlClient:
         The daemon validates the transition against its policy.
         
         Args:
+            workflow_id: Workflow ID
             from_phase: Current phase
             to_phase: Target phase
             evidence: Evidence for transition
             conditions_met: List of satisfied conditions
+            session_id: Optional session ID
             commit_sha: Optional commit SHA for validation
             
         Returns:
@@ -184,6 +208,8 @@ class WorkflowControlClient:
             resp = httpx.post(
                 f"{self.base_url}/workflow/transition",
                 json={
+                    "workflow_id": workflow_id,
+                    "session_id": session_id,
                     "from_phase": from_phase,
                     "to_phase": to_phase,
                     "evidence": evidence,
@@ -202,14 +228,20 @@ class WorkflowControlClient:
                 missing_conditions=[],
             )
 
-    def can_stop(self) -> CanStopResult:
+    def can_stop(self, workflow_id: str) -> CanStopResult:
         """Check if workflow can be stopped.
         
         Returns:
             CanStopResult with can_stop flag and reason
         """
+        if not workflow_id:
+            return CanStopResult(can_stop=True, reason="No active workflow")
         try:
-            resp = httpx.get(f"{self.base_url}/workflow/can-stop", timeout=3.0)
+            resp = httpx.get(
+                f"{self.base_url}/workflow/can-stop",
+                params={"workflow_id": workflow_id},
+                timeout=3.0,
+            )
             if resp.status_code == 200:
                 return CanStopResult.from_dict(resp.json())
         except Exception as e:
@@ -218,6 +250,7 @@ class WorkflowControlClient:
 
     def record_event(
         self,
+        workflow_id: str,
         event_type: str,
         phase: str,
         agent: Optional[str] = None,
@@ -228,6 +261,7 @@ class WorkflowControlClient:
         Events are logged but do NOT trigger phase transitions.
         
         Args:
+            workflow_id: Workflow ID
             event_type: Type of event (e.g., "agent_started", "agent_completed")
             phase: Current phase
             agent: Optional agent name
@@ -240,6 +274,7 @@ class WorkflowControlClient:
             resp = httpx.post(
                 f"{self.base_url}/event/record",
                 json={
+                    "workflow_id": workflow_id,
                     "event_type": event_type,
                     "phase": phase,
                     "agent": agent,
@@ -263,13 +298,14 @@ class WorkflowControlClient:
             True if recorded successfully
         """
         return self.record_event(
+            workflow_id=workflow_id,
             event_type="agent_started",
             phase=phase,
             agent=agent_name,
-            data={"workflow_id": workflow_id},
+            data={},
         )
 
-    def record_agent_complete(self, agent_name: str, phase: str) -> bool:
+    def record_agent_complete(self, workflow_id: str, agent_name: str, phase: str) -> bool:
         """Record agent completion (does NOT advance phase).
         
         This only logs the event - phase transitions require
@@ -283,11 +319,13 @@ class WorkflowControlClient:
             True if recorded successfully
         """
         return self.record_event(
+            workflow_id=workflow_id,
             event_type="agent_completed",
             phase=phase,
             agent=agent_name,
         )
 
 
-# Legacy compatibility: alias for DaemonControlClient
+# Legacy compatibility: aliases
 DaemonControlClient = WorkflowControlClient
+ControlClient = WorkflowControlClient

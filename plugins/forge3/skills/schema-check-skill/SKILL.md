@@ -9,7 +9,7 @@ triggers:
 
 # Schema Check Phase
 
-This is the **mandatory final phase** for all non-dispatcher workflows. Every workflow (except `/assist`) ends with schema-check validation.
+This is the **mandatory final phase** for all non-dispatcher workflows. Every workflow (except `/assist:wizard`) ends with schema-check validation.
 
 ## Purpose
 

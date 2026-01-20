@@ -109,8 +109,7 @@ CONSISTENCY_CHECK:
 RECOMMENDED_NEXT_PHASE: execute
 
 TRANSITION_CONDITIONS_MET:
-- component_type_determined
-- structure_planned
+- semantic-ack
 ```
 
 ## Important Notes
@@ -151,6 +150,5 @@ CONSISTENCY_CHECK:
 RECOMMENDED_NEXT_PHASE: execute
 
 TRANSITION_CONDITIONS_MET:
-- component_type_determined
-- structure_planned
+- semantic-ack
 ```

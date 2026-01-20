@@ -3,7 +3,7 @@
 Injection Metadata - Read-only skill injection hints for workflow phases.
 
 IMPORTANT: This is NOT authoritative workflow policy.
-Policy comes from the workflow daemon (workflowd).
+Policy comes from the workflow daemon (workflow-daemon).
 This module provides read-only hints for skill/agent injection only.
 """
 
@@ -30,12 +30,12 @@ PHASE_SKILL_MAP: Dict[str, Optional[str]] = {
 # Command-specific phase-to-skill mappings
 # Used when PHASE_SKILL_MAP returns None for a phase
 COMMAND_PHASE_SKILLS: Dict[str, Dict[str, str]] = {
-    "verify": {
+    "assist:verify": {
         "discover": "verify-discover-skill",
         "validate": "verify-validate-skill",
         "connectivity": "verify-connectivity-skill",
     },
-    "health-check": {
+    "assist:health-check": {
         "discover": "health-discover-skill",
         "analyze": "health-analyze-skill",
         "aggregate": "health-aggregate-skill",
@@ -59,12 +59,12 @@ PHASE_AGENT_MAP: Dict[str, Optional[str]] = {
 
 # Command-specific phase-to-agent mappings
 COMMAND_PHASE_AGENTS: Dict[str, Dict[str, str]] = {
-    "verify": {
+    "assist:verify": {
         "discover": "verify-discovery-agent",
         "validate": "verify-validate-agent",
         "connectivity": "verify-connectivity-agent",
     },
-    "health-check": {
+    "assist:health-check": {
         "discover": "health-discovery-agent",
         "analyze": "health-analyze-agent",
         "aggregate": "health-aggregate-agent",

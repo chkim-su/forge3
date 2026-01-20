@@ -1,6 +1,6 @@
 ---
 name: verify-validate-skill
-description: Validation phase for /verify command - validates each component
+description: Validation phase for /assist:verify command - validates each component
 triggers:
   - verify validate phase
   - component validation
@@ -9,7 +9,7 @@ triggers:
 
 # Verify Validation Phase
 
-The second phase of the `/verify` workflow. Validates each discovered component against schemas.
+The second phase of the `/assist:verify` workflow. Validates each discovered component against schemas.
 
 ## Purpose
 

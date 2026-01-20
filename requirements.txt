@@ -1,8 +1,9 @@
 # Forge3 Plugin Dependencies
 
-# Workflow MCP (local package)
-# Install with: pip install -e ../mcp
--e ../mcp
+# Workflow engine (local packages)
+# Install with: pip install -e ../../csc/workflow-daemon -e ../../csc/workflow-mcp
+-e ../../csc/workflow-daemon
+-e ../../csc/workflow-mcp
 
 # HTTP client for hooks
 httpx>=0.26.0

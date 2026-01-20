@@ -169,6 +169,6 @@ Recommendations:
 
 ## Related
 
-- `/verify` - Schema-focused validation (structural checks only)
-- `/health-check` - On-demand health analysis command
+- `/assist:verify` - Schema-focused validation (structural checks only)
+- `/assist:health-check` - On-demand health analysis command
 - `health-analyzer` agent - Autonomous health analysis

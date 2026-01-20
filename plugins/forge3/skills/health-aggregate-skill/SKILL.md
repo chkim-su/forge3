@@ -1,6 +1,6 @@
 ---
 name: health-aggregate-skill
-description: Aggregation phase for /health-check command - produces final report
+description: Aggregation phase for /assist:health-check command - produces final report
 triggers:
   - health-check aggregate phase
   - health report generation
@@ -9,7 +9,7 @@ triggers:
 
 # Health-Check Aggregation Phase
 
-The third phase of the `/health-check` workflow. Aggregates individual scores into a comprehensive health report.
+The third phase of the `/assist:health-check` workflow. Aggregates individual scores into a comprehensive health report.
 
 ## Purpose
 

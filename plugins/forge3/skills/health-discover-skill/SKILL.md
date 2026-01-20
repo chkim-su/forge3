@@ -1,6 +1,6 @@
 ---
 name: health-discover-skill
-description: Discovery phase for /health-check command - finds components for health analysis
+description: Discovery phase for /assist:health-check command - finds components for health analysis
 triggers:
   - health-check discover phase
   - find components for health analysis
@@ -9,7 +9,7 @@ triggers:
 
 # Health-Check Discovery Phase
 
-The first phase of the `/health-check` workflow. Discovers all plugin components for health analysis.
+The first phase of the `/assist:health-check` workflow. Discovers all plugin components for health analysis.
 
 ## Purpose
 

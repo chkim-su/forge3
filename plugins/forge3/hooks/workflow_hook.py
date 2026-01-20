@@ -3,7 +3,7 @@
 Workflow Hook - Initialize workflow on command invocation.
 
 Event: UserPromptSubmit
-Trigger: Prompt matches ^/(assist|plan|create|verify|health-check)\b
+Trigger: Prompt matches ^/assist:(wizard|plan|create|verify|health-check)\b
 
 CRITICAL BEHAVIOR:
 - Sends ONLY command name to daemon
@@ -29,7 +29,7 @@ from skill_loader import get_phase_skill_injection_v2
 
 
 # Commands that trigger workflow initialization
-WORKFLOW_COMMANDS = ["assist", "plan", "create", "verify", "health-check"]
+WORKFLOW_COMMANDS = ["assist:wizard", "assist:plan", "assist:create", "assist:verify", "assist:health-check"]
 
 
 def block_with_message(message: str):
@@ -73,19 +73,20 @@ def resolve_workspace_root() -> str:
 
 def parse_command(prompt: str) -> tuple[Optional[str], str]:
     """Parse command and task from prompt.
-    
+
     Args:
         prompt: The user prompt
-        
+
     Returns:
         Tuple of (command_name, task_description)
     """
-    for cmd in WORKFLOW_COMMANDS:
-        pattern = rf"^/{cmd}\b\s*(.*)"
-        match = re.match(pattern, prompt, re.IGNORECASE)
-        if match:
-            task = match.group(1).strip() or prompt
-            return cmd, task
+    # Match /assist:<subcommand> pattern
+    pattern = r"^/assist:(wizard|plan|create|verify|health-check)\b\s*(.*)"
+    match = re.match(pattern, prompt, re.IGNORECASE)
+    if match:
+        subcommand = match.group(1).lower()
+        task = match.group(2).strip() or prompt
+        return f"assist:{subcommand}", task
     return None, prompt
 
 
@@ -99,10 +100,11 @@ def format_phase_header(state) -> str:
         Formatted phase header
     """
     phase = state.current_phase
-    phase_num = state.phases.index(phase) + 1 if phase in state.phases else 1
-    total_phases = len(state.phases)
-    if state.final_phase and state.final_phase not in state.phases:
-        total_phases += 1
+    phase_sequence = list(state.phases)
+    if state.final_phase and state.final_phase not in phase_sequence:
+        phase_sequence.append(state.final_phase)
+    phase_num = phase_sequence.index(phase) + 1 if phase in phase_sequence else 1
+    total_phases = len(phase_sequence)
     
     return f"[Phase {phase_num}/{total_phases}: {phase.capitalize()}] Starting..."
 
@@ -126,6 +128,11 @@ def main():
         sys.exit(0)
 
     session_id = os.environ.get("CSC_SESSION_ID")
+    if not session_id:
+        block_with_message(
+            "Workflow init failed: CSC_SESSION_ID is required. "
+            "Start a supervised session (csc) before running /assist:wizard, /assist:plan, /assist:create, /assist:verify, or /assist:health-check."
+        )
     workspace_root = resolve_workspace_root()
     
     if not os.path.isdir(workspace_root):
@@ -138,7 +145,7 @@ def main():
         command=command,
         session_id=session_id,
         workspace_root=workspace_root,
-        task=task if command != "assist" else None,  # Assist is dispatcher, no task
+        task=task,
         metadata={
             "source": "workflow_hook",
             "original_prompt": prompt,
@@ -154,11 +161,11 @@ def main():
 
         # Build response based on workflow type
         if state.is_dispatcher:
-            # /assist is a dispatcher - just routes to other commands
+            # /assist:wizard is a dispatcher - just routes to other commands
             action_message = (
                 f"Required action: Invoke {state.required_agent} agent using Task tool.\n\n"
                 f"IMPORTANT: You MUST invoke the {state.required_agent} agent first.\n"
-                f"After router completes, recommend which command to run (/plan, /create, or /verify)."
+                f"After router completes, recommend which command to run (/assist:plan, /assist:create, or /assist:verify)."
             )
         else:
             # Non-dispatcher commands execute their workflows

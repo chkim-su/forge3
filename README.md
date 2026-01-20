@@ -18,7 +18,7 @@ Forge3 provides a structured workflow for creating plugin components (skills, ag
 3. **Hook never makes semantic judgments** - Only structural enforcement
 4. **Router Agent is always invoked** - Pattern matching is optimization only
 5. **Phase start = Agent execution first** - Mandatory
-6. **Completion signal = workflow_transition Tool Call** - Single source
+6. **Completion signal = mcp__workflow__workflow_transition Tool Call** - Single source
 
 ## Installation
 
@@ -27,7 +27,7 @@ Forge3 provides a structured workflow for creating plugin components (skills, ag
 pip install -r requirements.txt
 
 # Start workflow daemon
-workflowd
+workflow-daemon
 ```
 
 ## Usage
@@ -44,12 +44,6 @@ workflowd
 
 ```
 forge3/
-├── mcp/                    # Workflow daemon (FastAPI server)
-│   ├── workflow_schema.py  # Pydantic models
-│   ├── state_store.py      # In-memory + JSON persistence
-│   ├── workflow_engine.py  # State machine logic
-│   ├── sse_broadcaster.py  # SSE event broadcasting
-│   └── workflow_server.py  # FastAPI endpoints
 ├── hooks/                  # Event hooks
 │   ├── hooks.json          # Hook configuration
 │   ├── router_hook.py      # UserPromptSubmit handler
@@ -63,6 +57,9 @@ forge3/
 ├── skills/                 # Skill definitions
 ├── commands/               # Slash commands
 └── scripts/                # Utilities
+
+csc/
+└── workflow-daemon/        # Workflow engine (SSOT daemon)
 ```
 
 ## Workflow Phases
@@ -104,7 +101,7 @@ python scripts/workflow_monitor.py --workflow-id <id>
 ```bash
 # Start server in development mode
 cd forge3
-workflowd
+workflow-daemon
 
 # Test endpoints
 curl http://127.0.0.1:8766/health

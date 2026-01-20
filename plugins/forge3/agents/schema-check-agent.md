@@ -95,6 +95,8 @@ ISSUES:
 
 WORKFLOW_STATUS: <PASS|FAIL>
 ```
+TRANSITION_CONDITIONS_MET:
+- schema-ack
 
 ## Important Notes
 

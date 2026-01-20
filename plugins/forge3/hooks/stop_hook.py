@@ -20,6 +20,7 @@ import sys
 import os
 
 from control_client import WorkflowControlClient
+from _config import get_current_workflow_id
 
 
 client = WorkflowControlClient()
@@ -42,8 +43,13 @@ def allow():
 
 def main():
     """Handle Stop event."""
+    session_id = os.environ.get("CSC_SESSION_ID", "")
+    workflow_id = get_current_workflow_id(session_id)
+    if not workflow_id:
+        allow()
+
     # Check with workflow daemon
-    result = client.can_stop()
+    result = client.can_stop(workflow_id)
 
     if result.can_stop:
         allow()
@@ -51,7 +57,7 @@ def main():
         block_with_message(
             f"Cannot stop: {result.reason}\n\n"
             "The workflow is incomplete. Please either:\n"
-            "1. Complete the current phase by invoking the required agent and calling workflow_transition\n"
+            "1. Complete the current phase by invoking the required agent and calling mcp__workflow__workflow_transition\n"
             "2. Cancel the workflow explicitly\n"
         )
 

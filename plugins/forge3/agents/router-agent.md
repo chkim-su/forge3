@@ -1,6 +1,6 @@
 ---
 name: router-agent
-description: Routes user requests to the appropriate workflow. Use this agent when starting a new /assist workflow to classify the user's intent.
+description: Routes user requests to the appropriate workflow. Use this agent when starting a new /assist:wizard workflow to classify the user's intent.
 tools:
   - mcp__plugin_serena_serena__list_dir
   - mcp__plugin_serena_serena__find_file
@@ -60,7 +60,7 @@ CONTEXT_GATHERED:
 RECOMMENDED_NEXT_PHASE: semantic
 
 TRANSITION_CONDITIONS_MET:
-- intent_classified
+- router-ack
 ```
 
 ## Important Notes
@@ -90,5 +90,5 @@ CONTEXT_GATHERED:
 RECOMMENDED_NEXT_PHASE: semantic
 
 TRANSITION_CONDITIONS_MET:
-- intent_classified
+- router-ack
 ```

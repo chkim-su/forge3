@@ -3,14 +3,14 @@
 Phase Hook - Enforce agent invocation and validate transitions.
 
 Event: PreToolUse
-Trigger: Tool name matches ^(Task|workflow_transition)$
+Trigger: Tool name matches ^(Task|workflow_transition|mcp__workflow__workflow_transition)$
 
 CRITICAL BEHAVIOR:
 - If phase_status == "agent_required":
   - ALLOW Task tool with required agent
   - BLOCK everything else
-- If tool is workflow_transition:
-  - Validate with workflow daemon (ONLY source of truth)
+- If tool is mcp__workflow__workflow_transition:
+  - Gate with workflow daemon state (ONLY source of truth)
   - BLOCK invalid transitions
 
 DESIGN PRINCIPLE:
@@ -29,6 +29,7 @@ import os
 
 from control_client import WorkflowControlClient
 from injection_metadata import get_agent_for_phase
+from _config import get_current_workflow_id
 
 
 # Build agent mapping dynamically for all known agents
@@ -75,8 +76,15 @@ def main():
     tool_name = input_data.get("tool_name", "")
     tool_input = input_data.get("tool_input", {})
 
+    session_id = os.environ.get("CSC_SESSION_ID", "")
+    workflow_id = get_current_workflow_id(session_id)
+
+    if not workflow_id:
+        # No active workflow for this session - allow tool execution
+        allow()
+
     # Get workflow status from daemon
-    state = client.get_status()
+    state = client.get_status(workflow_id)
 
     # If no active workflow, allow tool execution
     if state is None:
@@ -116,13 +124,15 @@ def main():
         # Default: allow
         allow()
 
-    # Handle workflow_transition tool
+    # Handle workflow_transition tool (plain or MCP)
     if tool_name == "workflow_transition":
+        block_with_message(
+            "workflow_transition is provided via MCP. Use mcp__workflow__workflow_transition."
+        )
+
+    if tool_name == "mcp__workflow__workflow_transition":
         from_phase = tool_input.get("from_phase", current_phase)
         to_phase = tool_input.get("to_phase")
-        commit_sha = tool_input.get("commit_sha")
-        evidence = tool_input.get("evidence", {})
-        conditions = tool_input.get("conditions_met", [])
 
         # Validate to_phase is in allowed_next_phases (daemon-provided)
         if to_phase not in allowed_next_phases:
@@ -131,22 +141,15 @@ def main():
                 f"Allowed next phases: {allowed_next_phases}"
             )
 
-        # Validate with workflow daemon (AUTHORITATIVE)
-        result = client.transition(
-            from_phase=from_phase,
-            to_phase=to_phase,
-            evidence=evidence,
-            conditions_met=conditions,
-            commit_sha=commit_sha,
-        )
+        # Only allow transitions after agent completion
+        if phase_status != "agent_complete":
+            block_with_message(
+                f"Phase {current_phase} is not ready for transition. "
+                f"Current status: {phase_status}. Complete the required agent first."
+            )
 
-        if result.success:
-            allow()
-        else:
-            message = result.message
-            if result.missing_conditions:
-                message += f"\nMissing conditions: {result.missing_conditions}"
-            block_with_message(message)
+        # Allow tool execution; MCP tool will call the daemon
+        allow()
 
     # For any other tool, allow by default
     allow()

@@ -1,6 +1,6 @@
 {
   "name": "forge3",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "description": "Multi-command workflow system for creating Claude Code plugin components with daemon-owned policy and explicit phase transitions",
   "author": {
     "name": "Claude Code Team"
@@ -9,7 +9,6 @@
   "repository": "https://github.com/chkim-su/forge3",
   "keywords": [
     "workflow",
-    "mcp",
     "plugin-development",
     "code-generation",
     "state-machine",

@@ -1,6 +1,6 @@
 ---
 name: verify-discover-skill
-description: Discovery phase for /verify command - finds all components to validate
+description: Discovery phase for /assist:verify command - finds all components to validate
 triggers:
   - verify discover phase
   - find components to verify
@@ -9,7 +9,7 @@ triggers:
 
 # Verify Discovery Phase
 
-The first phase of the `/verify` workflow. Discovers all plugin components that need validation.
+The first phase of the `/assist:verify` workflow. Discovers all plugin components that need validation.
 
 ## Purpose
 
@@ -52,8 +52,8 @@ Agents:
 - agents/semantic-agent.md
 
 Commands:
-- commands/assist.md
-- commands/verify.md
+- commands/assist-wizard.md
+- commands/assist-verify.md
 
 Hooks:
 - hooks/hooks.json

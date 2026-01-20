@@ -1,6 +1,6 @@
 ---
 name: verify-connectivity-skill
-description: Connectivity phase for /verify command - validates cross-references
+description: Connectivity phase for /assist:verify command - validates cross-references
 triggers:
   - verify connectivity phase
   - cross-reference validation
@@ -9,7 +9,7 @@ triggers:
 
 # Verify Connectivity Phase
 
-The third phase of the `/verify` workflow. Validates cross-references between components.
+The third phase of the `/assist:verify` workflow. Validates cross-references between components.
 
 ## Purpose
 
@@ -67,7 +67,7 @@ hooks/hooks.json -> hooks/workflow_hook.py:
 commands/assist.md -> tools:
   [PASS] Task tool available
   [PASS] Read tool available
-  [WARN] Custom tool 'workflow_transition' - verify availability
+  [WARN] Custom tool 'mcp__workflow__workflow_transition' - verify availability
 
 CIRCULAR_DEPENDENCY_CHECK:
   [PASS] No circular dependencies detected
